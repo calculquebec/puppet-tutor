@@ -52,14 +52,14 @@ class tutor (
   exec { 'tutor_local_start':
     command => 'tutor local start --detach',
     user    => "$tutor_user",
-    path    => ['/usr/local/bin'],
+    path    => ['/usr/bin', '/usr/local/bin'],
     require => Exec['tutor_local_do_init'],
   }
 
   exec { 'tutor_lcaol_exec_lms_reload-uwsgi':
     command     => 'tutor local exec lms reload-uwsgi',
     user        => "$tutor_user",
-    path        => ['/usr/local/bin'],
+    path        => ['/usr/bin', '/usr/local/bin'],
     require     => Exec['tutor_local_start'],
     refreshonly => true,
   }
