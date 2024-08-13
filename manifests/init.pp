@@ -52,6 +52,7 @@ class tutor (
   exec { 'tutor_local_start':
     command => 'tutor local start --detach',
     user    => "$tutor_user",
+    unless  => "tutor local status | grep overhangio/openedx | grep tcp",
     path    => ['/usr/bin', '/usr/local/bin'],
     require => Exec['tutor_local_do_init'],
   }
