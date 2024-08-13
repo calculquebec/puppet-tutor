@@ -46,7 +46,8 @@ class tutor (
     unless  => "tutor local status | grep tcp",
     user    => "$tutor_user",
     path    => ['/usr/bin', '/usr/local/bin'],
-    require => Exec['tutor_local_dc_pull']
+    require => Exec['tutor_local_dc_pull'],
+    timeout => 900
   }
 
   exec { 'tutor_local_start':
