@@ -5,7 +5,7 @@ class tutor::base (
   $docker_packages = ['docker-ce', 'docker-ce-cli', 'containerd.io', 'docker-buildx-plugin', 'docker-compose-plugin']
 
   if $install_docker {
-    $repo_config_cmd = 'yum-config-manager'
+    $repo_config_cmd = 'dnf config-manager'
     exec { 'docker-repo':
       command => "${repo_config_cmd} --add-repo https://download.docker.com/linux/rhel/docker-ce.repo",
       creates => '/etc/yum.repos.d/docker-ce.repo',
