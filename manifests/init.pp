@@ -1,7 +1,7 @@
 class tutor (
-  String version = "18.1.3"
+  String $version = "18.1.3"
 ) {
-  ensure_resource('class', 'tutor::base', { 'install_docker' => true })
+  ensure_resource('class', 'tutor::base', { 'install_docker' => true, 'tutor_version' => $version })
 
   group { 'tutor':
     ensure => 'present',
