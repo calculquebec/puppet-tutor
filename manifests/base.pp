@@ -18,4 +18,6 @@ class tutor::base (
 	    ],
 	  }
 	}
+
+	ensure_packages(['python3', 'python3-pip', 'libyaml-dev'])
 }
