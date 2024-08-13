@@ -1,5 +1,6 @@
 class tutor::base (
-  Boolean $install_docker = true
+  Boolean $install_docker = true,
+  String $tutor_version = "18.1.3"
 ) {
   $docker_packages = ["docker-ce", "docker-ce-cli", "containerd.io", "docker-buildx-plugin", "docker-compose-plugin"]
 
@@ -30,8 +31,8 @@ class tutor::base (
   ensure_packages(['python3', 'python3-pip', 'libyaml-devel'])
 
   exec { 'tutor-install':
-    command => 'pip install "tutor[full]"',
-    creates => "/usr/local/bin/tutor",
+    command => "pip install tutor[full]==${tutor_version}",
+    creates => '/usr/local/bin/tutor',
     path    => ['/usr/bin'],
     require => [
       Service['docker'],
