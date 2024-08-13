@@ -27,7 +27,7 @@ class tutor (
       command => "tutor config save --non-interactive --set ${key}=${value}",
       unless  => "grep '${key}: ${value}' $(tutor config printroot)/config.yml",
       user    => "$tutor_user",
-      path    => ['/usr/bin']
+      path    => ['/usr/bin', '/usr/local/bin']
     }
   }
 }
