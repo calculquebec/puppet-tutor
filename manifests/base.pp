@@ -1,5 +1,5 @@
 class tutor::base (
-  Boolean $install_docker
+  Boolean $install_docker = true
 ) {
   $docker_packages = ["docker-ce", "docker-ce-cli", "containerd.io", "docker-buildx-plugin", "docker-compose-plugin"]
 

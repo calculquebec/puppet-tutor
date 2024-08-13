@@ -1,4 +1,6 @@
-class tutor {
+class tutor (
+  String version = "18.1.3"
+) {
   ensure_resource('class', 'tutor::base', { 'install_docker' => true })
 
   group { 'tutor':
