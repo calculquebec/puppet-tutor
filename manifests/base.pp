@@ -20,4 +20,13 @@ class tutor::base (
 	}
 
 	ensure_packages(['python3', 'python3-pip', 'libyaml-devel'])
+
+	exec { 'tutor-install':
+	  command => 'pip install "tutor[full]"',
+    path    => '['/usr/bin'],
+		require => [
+		  Package[$docker_packages],
+			Pakcage["python3-pip"]
+		]
+	}
 }
