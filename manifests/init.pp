@@ -8,8 +8,8 @@ class tutor {
     ensure     => 'present',
     gid        => 'tutor',
     groups     => 'docker',
-		managehome => true,
-		home       => '/tutor'
+    managehome => true,
+    home       => '/tutor',
     require    => [
       Package["docker-ce"],
       Group['tutor']
