@@ -26,7 +26,7 @@ class tutor::base (
     path    => ['/usr/bin'],
 		require => [
 		  Package[$docker_packages],
-			Pakcage["python3-pip"]
+			Package["python3-pip"]
 		]
 	}
 }
