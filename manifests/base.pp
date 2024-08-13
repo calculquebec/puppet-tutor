@@ -19,7 +19,7 @@ class tutor::base (
       ],
     }
 
-    service { 'docker': 
+    service { 'docker':
       ensure  => running,
       enable  => true,
       require => [
@@ -30,9 +30,9 @@ class tutor::base (
 
   ensure_packages(['python3', 'python3-pip', 'libyaml-devel'])
 
-  package { 'tutor': 
-    name     => "tutor[full]==${tutor_version}",
+  package { 'tutor':
     ensure   => 'present',
+    name     => "tutor[full]==${tutor_version}",
     provider => 'pip3',
     require  => [
       Service['docker'],
