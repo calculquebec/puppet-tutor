@@ -17,6 +17,14 @@ class tutor::base (
         Exec['docker-repo'],
       ],
     }
+
+		service { 'docker': 
+		  ensure  => running,
+			enable  => true,
+			require => [
+			  Package[$docker_packages]
+			]
+		}
   }
 
   ensure_packages(['python3', 'python3-pip', 'libyaml-devel'])
@@ -26,7 +34,7 @@ class tutor::base (
     creates => "/usr/local/bin/tutor",
     path    => ['/usr/bin'],
     require => [
-      Package[$docker_packages],
+		  Service['docker'],
       Package["python3-pip"]
     ]
   }
