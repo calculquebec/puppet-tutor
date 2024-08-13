@@ -1,0 +1,13 @@
+{
+    "name": "puppet-tutor",
+    "version": "0.1",
+    "author": "Maxime Boissonneault",
+    "summary": "Install, configure, and manage Tutor (OpenEdX)",
+    "license": "MIT",
+    "source": "https://github.com/calculquebec/puppet-tutor",
+    "project_page": "https://github.com/calculquebec/puppet-tutor",
+    "issues_url": "https://github.com/calculquebec/puppet-tutor/issues",
+    "dependencies": [ 
+        { "name":"puppetlabs/stdlib", "version_requirement": ">= 5.2.0"  }
+    ]
+}
