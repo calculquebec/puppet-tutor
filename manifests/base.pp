@@ -23,7 +23,7 @@ class tutor::base (
 
 	exec { 'tutor-install':
 	  command => 'pip install "tutor[full]"',
-    path    => '['/usr/bin'],
+    path    => ['/usr/bin'],
 		require => [
 		  Package[$docker_packages],
 			Pakcage["python3-pip"]
