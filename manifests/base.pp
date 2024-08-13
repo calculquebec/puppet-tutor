@@ -36,7 +36,7 @@ class tutor::base (
     provider => 'pip3',
     require  => [
       Service['docker'],
-      Package['python-pip3']
+      Package['python3-pip']
     ]
   }
 }
