@@ -1,6 +1,8 @@
 class tutor::base (
 	Boolean $install_docker
 ) {
+	$docker_packages = ["docker-ce", "docker-ce-cli", "containerd.io", "docker-buildx-plugin", "docker-compose-plugin"]
+
   if $install_docker {
 		$repo_config_cmd = 'yum-config-manager'
 		exec { 'docker-repo':
@@ -8,8 +10,6 @@ class tutor::base (
 	    creates => "/etc/yum.repos.d/docker-ce.repo",
 	    path    => ['/usr/bin'],
 	  }
-
-		$docker_packages = ["docker-ce", "docker-ce-cli", "containerd.io", "docker-buildx-plugin", "docker-compose-plugin"]
 
 		package { $docker_packages:
 	    ensure  => 'installed',
@@ -23,6 +23,7 @@ class tutor::base (
 
 	exec { 'tutor-install':
 	  command => 'pip install "tutor[full]"',
+		creates => "/usr/local/bin/tutor",
     path    => ['/usr/bin'],
 		require => [
 		  Package[$docker_packages],
