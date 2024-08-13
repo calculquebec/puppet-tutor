@@ -1,5 +1,5 @@
 class tutor (
-  String $version = '18.1.3'
+  String $version = '18.1.3',
   Array[Tuple[String, String]] $config,
 ) {
   $tutor_user = 'tutor'
