@@ -37,6 +37,6 @@ class tutor (
     command => "tutor local dc pull",
     unless  => "docker images ${openedx_docker_repository} | grep ${version}",
     user    => "$tutor_user",
-    path    => ['/usr/local/bin']
+    path    => ['/usr/bin', '/usr/local/bin']
   }
 }
