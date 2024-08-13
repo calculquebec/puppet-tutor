@@ -1,5 +1,5 @@
 class tutor (
-  String $version = "18.1.3"
+  String $version = '18.1.3'
 ) {
   ensure_resource('class', 'tutor::base', { 'install_docker' => true, 'tutor_version' => $version })
 
@@ -13,7 +13,7 @@ class tutor (
     managehome => true,
     home       => '/tutor',
     require    => [
-      Package["docker-ce"],
+      Package['docker-ce'],
       Group['tutor']
     ]
   }

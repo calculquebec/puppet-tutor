@@ -1,14 +1,14 @@
 class tutor::base (
   Boolean $install_docker = true,
-  String $tutor_version = "18.1.3"
+  String $tutor_version = '18.1.3'
 ) {
-  $docker_packages = ["docker-ce", "docker-ce-cli", "containerd.io", "docker-buildx-plugin", "docker-compose-plugin"]
+  $docker_packages = ['docker-ce', 'docker-ce-cli', 'containerd.io', 'docker-buildx-plugin', 'docker-compose-plugin']
 
   if $install_docker {
     $repo_config_cmd = 'yum-config-manager'
     exec { 'docker-repo':
       command => "${repo_config_cmd} --add-repo https://download.docker.com/linux/rhel/docker-ce.repo",
-      creates => "/etc/yum.repos.d/docker-ce.repo",
+      creates => '/etc/yum.repos.d/docker-ce.repo',
       path    => ['/usr/bin'],
     }
 
