@@ -3,6 +3,8 @@ class tutor (
   Array[Tuple[String, String]] $config,
 ) {
   $tutor_user = 'tutor'
+  $openedx_docker_repository = 'overhangio/openedx'
+
   ensure_resource('class', 'tutor::base', { 'install_docker' => true, 'tutor_version' => $version })
 
   group { "$tutor_user":
@@ -29,5 +31,12 @@ class tutor (
       user    => "$tutor_user",
       path    => ['/usr/bin', '/usr/local/bin']
     }
+  }
+
+  exec { "tutor_local_dc_pull":
+    command => "tutor local dc pull",
+    unless  => "docker images ${openedx_docker_repository} | grep ${version}",
+    user    => "$tutor_user",
+    path    => ['/usr/local/bin']
   }
 }
