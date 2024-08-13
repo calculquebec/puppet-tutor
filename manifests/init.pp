@@ -25,8 +25,8 @@ class tutor (
     $value = $tuple[1]
     exec { "tutor_config_${key}":
       command => "tutor config save --non-interactive --set ${key}=${value}",
+      unless  => "grep '${key}: ${value}' $(tutor config printroot)/config.yml",
       user    => "$tutor_user"
-      unless  => "grep '${key}: ${value}' $(tutor config printroot)/config.yml"
     }
   }
 }
