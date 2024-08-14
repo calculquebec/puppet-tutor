@@ -47,7 +47,7 @@ class tutor (
     user    => $tutor_user,
     path    => ['/usr/bin', '/usr/local/bin'],
     require => Exec['tutor_local_dc_pull'],
-    timeout => 900
+    timeout => 1800
   }
 
   exec { 'tutor_local_start':
