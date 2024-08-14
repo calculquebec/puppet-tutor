@@ -7,18 +7,18 @@ class tutor (
 
   ensure_resource('class', 'tutor::base', { 'install_docker' => true, 'tutor_version' => $version })
 
-  group { "$tutor_user":
+  group { $tutor_user:
     ensure => 'present',
   }
-  user { "$tutor_user":
+  user { $tutor_user:
     ensure     => 'present',
-    gid        => "$tutor_user",
+    gid        => $tutor_user,
     groups     => 'docker',
     managehome => true,
     home       => "/$tutor_user",
     require    => [
       Package['docker-ce'],
-      Group["$tutor_user"]
+      Group[$tutor_user]
     ]
   }
 
@@ -28,7 +28,7 @@ class tutor (
     exec { "tutor_config_${key}":
       command => "tutor config save --set ${key}='${value}'",
       unless  => "grep '${key}: ${value}' $(tutor config printroot)/config.yml",
-      user    => "$tutor_user",
+      user    => $tutor_user,
       path    => ['/usr/bin', '/usr/local/bin'],
       notify  => Exec['tutor_lcaol_exec_lms_reload-uwsgi']
     }
@@ -37,14 +37,14 @@ class tutor (
   exec { 'tutor_local_dc_pull':
     command => "tutor local dc pull",
     unless  => "docker images ${openedx_docker_repository} | grep ${version}",
-    user    => "$tutor_user",
+    user    => $tutor_user,
     path    => ['/usr/bin', '/usr/local/bin']
   }
 
   exec { 'tutor_local_do_init':
     command => 'tutor local do init',
     unless  => "tutor local status | grep tcp",
-    user    => "$tutor_user",
+    user    => $tutor_user,
     path    => ['/usr/bin', '/usr/local/bin'],
     require => Exec['tutor_local_dc_pull'],
     timeout => 900
@@ -52,7 +52,7 @@ class tutor (
 
   exec { 'tutor_local_start':
     command => 'tutor local start --detach',
-    user    => "$tutor_user",
+    user    => $tutor_user,
     unless  => "tutor local status | grep overhangio/openedx | grep tcp",
     path    => ['/usr/bin', '/usr/local/bin'],
     require => Exec['tutor_local_do_init'],
@@ -60,7 +60,7 @@ class tutor (
 
   exec { 'tutor_lcaol_exec_lms_reload-uwsgi':
     command     => 'tutor local exec lms reload-uwsgi',
-    user        => "$tutor_user",
+    user        => $tutor_user,
     path        => ['/usr/bin', '/usr/local/bin'],
     require     => Exec['tutor_local_start'],
     refreshonly => true,
