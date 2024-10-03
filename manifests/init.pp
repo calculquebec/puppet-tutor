@@ -1,9 +1,12 @@
 class tutor (
   String $version = '18.1.3',
   Array[Tuple[String, String]] $config,
+  Array[Tuple[String, String]] $env_patches,
 ) {
   $tutor_user = 'tutor'
   $openedx_docker_repository = 'overhangio/openedx'
+  $puppet_tutor_py = '/$tutor_user/.local/share/tutor-plugins/puppet_tutor.py'
+  $tutor_plugins_dir = '/$tutor_user/.local/share/tutor-plugins'
 
   ensure_resource('class', 'tutor::base', { 'install_docker' => true, 'tutor_version' => $version })
 
@@ -32,6 +35,58 @@ class tutor (
       path    => ['/usr/bin', '/usr/local/bin'],
       notify  => Exec['tutor_local_exec_lms_reload-uwsgi']
     }
+  }
+
+  file { $tutor_plugins_dir:
+    ensure => 'directory'
+    owner  => $tutor_user
+    group  => $tutor_user
+  }
+
+  file { $puppet_tutor_py:
+    ensure  => 'present'
+    owner   => $tutor_user
+    group   => $tutor_user
+    require => File[$tutor_plugins_dir]
+  }
+
+  file_line { "${puppet_tutor_py}_header":
+    ensure  => present
+    path    => $puppet_tutor_py
+    line    => 'from tutor import hooks'
+    require => File[$puppet_tutor_py]
+    notify  => Exec['tutor_config_save']
+  }
+
+  $env_patches.each |$tuple| {
+    $key   = $tuple[0]
+    $value = $tuple[1]
+
+    file_line { "${puppet_tutor_py}_${key}_${value}":
+      ensure  => present
+      path    => $puppet_tutor_py
+      line    => "hooks.Filters.ENV_PATCHES.add_item((${key}, ${value}))"
+      require => File[$puppet_tutor_py]
+      after   => 'from tutor import hooks'
+      notify  => Exec['tutor_config_save']
+    }
+  }
+
+  exec { 'tutor_plugins_enable':
+    command => 'tutor plugins enable puppet_tutor'
+    unless  => 'tutor plugins list | grep puppet_tutor | grep enabled'
+    user    => $tutor_user
+    path    => ['/usr/bin', '/usr/local/bin']
+    require => File[$puppet_tutor_py]
+    notify  => Exec['tutor_config_save']
+  }
+
+  exec { 'tutor_config_save':
+    command     => 'tutor config save'
+    user        => $tutor_user
+    path        => ['/usr/bin', '/usr/local/bin']
+    notify      => Exec['tutor_local_exec_lms_reload']
+    refreshonly => true
   }
 
   exec { 'tutor_local_dc_pull':
