@@ -2,6 +2,8 @@ class tutor (
   String $version = '18.1.3',
   Array[Tuple[String, String]] $config,
   Array[Tuple[String, String]] $env_patches = [],
+  String $admin_password,
+  String $admin_email,
 ) {
   $tutor_user = 'tutor'
   $openedx_docker_repository = 'overhangio/openedx'
@@ -58,19 +60,26 @@ class tutor (
   }
 
   exec { 'tutor_plugins_enable':
-    command => 'tutor plugins enable puppet_tutor',
-    unless  => 'tutor plugins list | grep puppet_tutor | grep enabled',
-    user    => $tutor_user,
-    path    => ['/usr/bin', '/usr/local/bin'],
-    require => File[$puppet_tutor_py],
-    notify  => Exec['tutor_config_save'],
+    command     => 'tutor plugins enable puppet_tutor',
+    unless      => 'tutor plugins list | grep puppet_tutor | grep enabled',
+    user        => $tutor_user,
+    path        => ['/usr/bin', '/usr/local/bin'],
+    refreshonly => true,
+    notify      => Exec['tutor_config_save'],
   }
 
+  exec { 'tutor_create_admin':
+    command     => "tutor local do createuser --staff --superuser admin ${admin_email} --password ${admin_password}",
+    user        => $tutor_user,
+    path        => ['/usr/bin', '/usr/local/bin'],
+    refreshonly => true,
+  }
   exec { 'tutor_config_save':
     command     => 'tutor config save',
     user        => $tutor_user,
     path        => ['/usr/bin', '/usr/local/bin'],
     notify      => Exec['tutor_local_exec_lms_reload-uwsgi'],
+    require     => Exec['tutor_local_do_init'],
     refreshonly => true,
   }
 
@@ -87,6 +96,7 @@ class tutor (
     user    => $tutor_user,
     path    => ['/usr/bin', '/usr/local/bin'],
     require => Exec['tutor_local_dc_pull'],
+    notify  => [Exec['tutor_plugins_enable'], Exec['tutor_create_admin']],
     timeout => 1800
   }
 
