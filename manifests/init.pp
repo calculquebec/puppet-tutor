@@ -68,12 +68,6 @@ class tutor (
     notify      => Exec['tutor_config_save'],
   }
 
-  exec { 'tutor_create_admin':
-    command     => "tutor local do createuser --staff --superuser admin ${admin_email} --password ${admin_password}",
-    user        => $tutor_user,
-    path        => ['/usr/bin', '/usr/local/bin'],
-    refreshonly => true,
-  }
   exec { 'tutor_config_save':
     command     => 'tutor config save',
     user        => $tutor_user,
@@ -98,6 +92,14 @@ class tutor (
     require => Exec['tutor_local_dc_pull'],
     notify  => [Exec['tutor_plugins_enable'], Exec['tutor_create_admin']],
     timeout => 1800
+  }
+
+  exec { 'tutor_create_admin':
+    command     => "tutor local do createuser --staff --superuser admin ${admin_email} --password ${admin_password}",
+    onlyif      => "tutor local status | grep tcp",
+    user        => $tutor_user,
+    path        => ['/usr/bin', '/usr/local/bin'],
+    refreshonly => true,
   }
 
   exec { 'tutor_local_start':
