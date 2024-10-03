@@ -30,7 +30,7 @@ class tutor (
       unless  => "grep '${key}: ${value}' $(tutor config printroot)/config.yml",
       user    => $tutor_user,
       path    => ['/usr/bin', '/usr/local/bin'],
-      notify  => Exec['tutor_lcaol_exec_lms_reload-uwsgi']
+      notify  => Exec['tutor_local_exec_lms_reload-uwsgi']
     }
   }
 
@@ -58,7 +58,7 @@ class tutor (
     require => Exec['tutor_local_do_init'],
   }
 
-  exec { 'tutor_lcaol_exec_lms_reload-uwsgi':
+  exec { 'tutor_local_exec_lms_reload-uwsgi':
     command     => 'tutor local exec lms reload-uwsgi',
     user        => $tutor_user,
     path        => ['/usr/bin', '/usr/local/bin'],
