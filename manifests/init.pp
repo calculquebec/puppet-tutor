@@ -1,7 +1,7 @@
 class tutor (
   String $version = '18.1.3',
   Array[Tuple[String, String]] $config,
-  Array[Tuple[String, String]] $env_patches,
+  Array[Tuple[String, String]] $env_patches = [],
 ) {
   $tutor_user = 'tutor'
   $openedx_docker_repository = 'overhangio/openedx'
