@@ -59,13 +59,28 @@ class tutor (
     content => inline_epp($puppet_tutor_py_template),
   }
 
-  exec { 'tutor_plugins_enable':
+  exec { 'tutor_plugins_enable_puppet_tutor':
     command     => 'tutor plugins enable puppet_tutor',
     unless      => 'tutor plugins list | grep puppet_tutor | grep enabled',
     user        => $tutor_user,
     path        => ['/usr/bin', '/usr/local/bin'],
-    refreshonly => true,
     notify      => Exec['tutor_config_save'],
+  }
+
+  exec { 'tutor_plugins_enable_backup':
+    command     => 'tutor plugins enable backup',
+    unless      => 'tutor plugins list | grep backup | grep enabled',
+    user        => $tutor_user,
+    path        => ['/usr/bin', '/usr/local/bin'],
+    notify      => Exec['tutor_config_save', 'tutor_backup_build_image'],
+  }
+
+  exec { 'tutor_backup_build_image':
+    command     => 'tutor images build backup',
+    unless      => 'docker images | grep backup',
+    user        => $tutor_user,
+    refreshonly => true,
+    path        => ['/usr/bin', '/usr/local/bin'],
   }
 
   exec { 'tutor_config_save':
@@ -90,7 +105,7 @@ class tutor (
     user    => $tutor_user,
     path    => ['/usr/bin', '/usr/local/bin'],
     require => Exec['tutor_local_dc_pull'],
-    notify  => [Exec['tutor_plugins_enable'], Exec['tutor_create_admin']],
+    notify  => [Exec['tutor_create_admin']],
     timeout => 1800
   }
 

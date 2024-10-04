@@ -1,6 +1,7 @@
 class tutor::base (
   Boolean $install_docker = true,
-  String $tutor_version = '18.1.3'
+  String $tutor_version = '18.1.3',
+  String $tutor_contrib_backup_version = '3.3.0'
 ) {
   $docker_packages = ['docker-ce', 'docker-ce-cli', 'containerd.io', 'docker-buildx-plugin', 'docker-compose-plugin']
 
@@ -36,6 +37,15 @@ class tutor::base (
     provider => 'pip3',
     require  => [
       Service['docker'],
+      Package['python3-pip']
+    ]
+  }
+
+  package { 'tutor-contrib-backup':
+    ensure   => 'present',
+    name     => "git+https://github.com/hastexo/tutor-contrib-backup@v${tutor_contrib_backup_version}",
+    provider => 'pip3',
+    require  => [
       Package['python3-pip']
     ]
   }
