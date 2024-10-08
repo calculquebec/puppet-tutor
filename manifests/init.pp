@@ -57,6 +57,7 @@ class tutor (
     group   => $tutor_user,
     require => File[$tutor_plugins_dir],
     content => inline_epp($puppet_tutor_py_template),
+    notify  => Exec['tutor_config_save'],
   }
 
   exec { 'tutor_plugins_enable_puppet_tutor':
