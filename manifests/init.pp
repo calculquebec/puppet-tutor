@@ -31,8 +31,8 @@ class tutor (
     $key   = $tuple[0]
     $value = $tuple[1]
     exec { "tutor_config_${key}":
-      command => "tutor config save --set ${key}='${value}'",
-      unless  => "grep '${key}: ${value}' $(tutor config printroot)/config.yml",
+      command => "tutor config save --set ${key}=\"${value}\"",
+      unless  => "test \"$(tutor config printvalue ${key})\" == \"${value}\"",
       user    => $tutor_user,
       path    => ['/usr/bin', '/usr/local/bin'],
       notify  => Exec['tutor_local_exec_lms_reload-uwsgi']
