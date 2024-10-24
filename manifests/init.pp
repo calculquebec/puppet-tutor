@@ -59,6 +59,7 @@ class tutor (
   String $version = '18.1.3',
   Array[Tuple[String, String]] $config,
   Array[Tuple[String, String]] $env_patches = [],
+  String $openedx_extra_pip_requirements = '',
   String $brand_theme_url = '',
   String $admin_password,
   String $admin_email,
@@ -95,6 +96,26 @@ class tutor (
       path    => ['/usr/bin', '/usr/local/bin'],
       notify  => Exec['tutor_local_exec_lms_reload-uwsgi']
     }
+  }
+
+  if $openedx_extra_pip_requirements != '' {
+    $key = 'OPENEDX_EXTRA_PIP_REQUIREMENTS'
+    $value = $openedx_extra_pip_requirements
+    exec { "tutor_config_${key}_${value}":
+      command => "tutor config save --set ${key}=\"${value}\"",
+      unless  => "test \"$(tutor config printvalue ${key})\" == \"${value}\"",
+      user    => $tutor_user,
+      path    => ['/usr/bin', '/usr/local/bin'],
+      notify  => Exec['tutor_images_build_openedx']
+    }
+  }
+  exec { "tutor_images_build_openedx":
+    command     => "tutor images build openedx",
+    user        => $tutor_user,
+    refreshonly => true,
+    path        => ['/usr/bin', '/usr/local/bin'],
+    timeout     => 1800,
+    notify      => Exec['tutor_local_reboot'],
   }
 
   file { $tutor_plugins_dir:
