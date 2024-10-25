@@ -179,9 +179,9 @@ class tutor (
     exec { "chown -R root:root ${tutor_backup_dir}/${filename}":
       refreshonly => true,
       path        => ['/bin/', '/usr/bin'],
-      notify      => Exec["notutor local restore --date ${date}"]
+      notify      => Exec["tutor local restore --date ${date}"]
     }
-    exec { "notutor local restore --date ${date}":
+    exec { "tutor local restore --date ${date}":
       refreshonly => true,
       user        => $tutor_user,
       path        => ['/usr/bin', '/usr/local/bin'],
