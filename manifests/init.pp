@@ -176,6 +176,7 @@ class tutor (
     exec { "cp ${path}/${filename} ${tutor_backup_dir}":
       refreshonly => true,
       path        => ['/bin/', '/usr/bin'],
+      notify      => Exec["chown -R root:root ${tutor_backup_dir}/${filename}"],
     }
     exec { "chown -R root:root ${tutor_backup_dir}/${filename}":
       refreshonly => true,
