@@ -63,10 +63,12 @@ class tutor (
   String $brand_theme_url = '',
   String $admin_password,
   String $admin_email,
+  Optional[Struct[{ date => String[1], path => String[1] }]] $backup_to_restore = undef,
 ) {
   $tutor_user = 'tutor'
   $openedx_docker_repository = 'overhangio/openedx'
   $tutor_plugins_dir = "/${tutor_user}/.local/share/tutor-plugins"
+  $tutor_backup_dir = "/${tutor_user}/.local/share/tutor/env/backup/"
   $puppet_tutor_py = "/${tutor_plugins_dir}/puppet_tutor.py"
 
   ensure_resource('class', 'tutor::base', { 'install_docker' => true, 'tutor_version' => $version })
@@ -123,6 +125,11 @@ class tutor (
     owner  => $tutor_user,
     group  => $tutor_user,
   }
+  file { $tutor_backup_dir:
+    ensure => 'directory',
+    owner  => $tutor_user,
+    group  => $tutor_user,
+  }
 
   $puppet_tutor_py_template = @(END)
   from tutor import hooks
@@ -157,12 +164,35 @@ class tutor (
     }
   }
 
+  if $backup_to_restore {
+    $date = $backup_to_restore['date']
+    $path = $backup_to_restore['path']
+    $filename = "backup.${date}.tar.xz"
+    archive { 'backup_to_restore':
+      path         => "${tutor_backup_dir}/${filename}",
+      extract      => false,
+      source       => "${path}/${filename}",
+      require      => File[$tutor_backup_dir],
+      notify       => Exec["chown -R root:root ${tutor_backup_dir}/${filename}"],
+    }
+    exec { "chown -R root:root ${tutor_backup_dir}/${filename}":
+      refreshonly => true,
+      path        => ['/bin/', '/usr/bin'],
+      notify      => Exec["tutor local restore --date ${date}"]
+    }
+    exec { "tutor local restore --date ${date}":
+      refreshonly => true,
+      user        => $tutor_user,
+      path        => ['/usr/bin', '/usr/local/bin'],
+      notify      => Exec['tutor_local_do_init']
+    }
+  }
+
   exec { 'tutor_config_save':
     command     => 'tutor config save',
     user        => $tutor_user,
     path        => ['/usr/bin', '/usr/local/bin'],
     notify      => Exec['tutor_local_exec_lms_reload-uwsgi'],
-    require     => Exec['tutor_local_do_init'],
     refreshonly => true,
   }
 
@@ -170,17 +200,18 @@ class tutor (
     command => "tutor local dc pull",
     unless  => "docker images ${openedx_docker_repository} | grep ${version}",
     user    => $tutor_user,
-    path    => ['/usr/bin', '/usr/local/bin']
+    path    => ['/usr/bin', '/usr/local/bin'],
+    notify  => [Exec['tutor_local_do_init'], Exec['tutor_create_admin']]
   }
 
   exec { 'tutor_local_do_init':
-    command => 'tutor local do init',
-    unless  => "tutor local status | grep tcp",
-    user    => $tutor_user,
-    path    => ['/usr/bin', '/usr/local/bin'],
-    require => Exec['tutor_local_dc_pull'],
-    notify  => [Exec['tutor_create_admin']],
-    timeout => 1800
+    command      => 'tutor local do init',
+    unless       => "tutor local status | grep tcp",
+    user         => $tutor_user,
+    path         => ['/usr/bin', '/usr/local/bin'],
+    notify       => [Exec['tutor_create_admin']],
+    refreshonly => true,
+    timeout      => 1800
   }
 
   exec { 'tutor_create_admin':
@@ -188,6 +219,7 @@ class tutor (
     onlyif      => "tutor local status | grep tcp",
     user        => $tutor_user,
     path        => ['/usr/bin', '/usr/local/bin'],
+    require     => Exec['tutor_local_do_init'],
     refreshonly => true,
   }
 
@@ -203,7 +235,6 @@ class tutor (
     command     => 'tutor local reboot --detach',
     user        => $tutor_user,
     path        => ['/usr/bin', '/usr/local/bin'],
-    require     => Exec['tutor_local_do_init'],
     refreshonly => true,
   }
 
@@ -211,7 +242,6 @@ class tutor (
     command     => 'tutor local exec lms reload-uwsgi',
     user        => $tutor_user,
     path        => ['/usr/bin', '/usr/local/bin'],
-    require     => Exec['tutor_local_start'],
     refreshonly => true,
   }
 }
