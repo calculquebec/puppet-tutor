@@ -168,19 +168,20 @@ class tutor (
     $date = $backup_to_restore['date']
     $path = $backup_to_restore['path']
     $filename = "backup.${date}.tar.xz"
-    archive { 'backup_to_restore':
-      path         => "${tutor_backup_dir}/${filename}",
-      extract      => false,
-      source       => "${path}/${filename}",
-      require      => File[$tutor_backup_dir],
-      notify       => Exec["chown -R root:root ${tutor_backup_dir}/${filename}"],
+    file { "/${tutor_user}/.backup_restored":
+      ensure => file,
+      notify => Exec["cp ${path}/${filename} ${tutor_backup_dir}"]
+    }
+    exec { "cp ${path}/${filename} ${tutor_backup_dir}":
+      refreshonly => true,
+      path        => ['/bin/', '/usr/bin'],
     }
     exec { "chown -R root:root ${tutor_backup_dir}/${filename}":
       refreshonly => true,
       path        => ['/bin/', '/usr/bin'],
-      notify      => Exec["tutor local restore --date ${date}"]
+      notify      => Exec["notutor local restore --date ${date}"]
     }
-    exec { "tutor local restore --date ${date}":
+    exec { "notutor local restore --date ${date}":
       refreshonly => true,
       user        => $tutor_user,
       path        => ['/usr/bin', '/usr/local/bin'],
