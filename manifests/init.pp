@@ -169,8 +169,9 @@ class tutor (
     $path = $backup_to_restore['path']
     $filename = "backup.${date}.tar.xz"
     file { "/${tutor_user}/.backup_restored":
-      ensure => file,
-      notify => Exec["cp ${path}/${filename} ${tutor_backup_dir}"]
+      ensure  => file,
+      content => $date,
+      notify  => Exec["cp ${path}/${filename} ${tutor_backup_dir}"]
     }
     exec { "cp ${path}/${filename} ${tutor_backup_dir}":
       refreshonly => true,
