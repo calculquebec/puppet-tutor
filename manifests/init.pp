@@ -171,6 +171,7 @@ class tutor (
     file { "/${tutor_user}/.backup_restored":
       ensure  => file,
       content => $date,
+      require => [Tutor::Plugin['backup'], Exec['tutor_local_do_init']],
       notify  => Exec["cp ${path}/${filename} ${tutor_backup_dir}"]
     }
     exec { "cp ${path}/${filename} ${tutor_backup_dir}":
@@ -187,7 +188,7 @@ class tutor (
       refreshonly => true,
       user        => $tutor_user,
       path        => ['/usr/bin', '/usr/local/bin'],
-      notify      => Exec['tutor_local_do_init']
+      notify      => Exec['tutor_local_redo_init']
     }
   }
 
@@ -213,6 +214,14 @@ class tutor (
     user         => $tutor_user,
     path         => ['/usr/bin', '/usr/local/bin'],
     notify       => [Exec['tutor_create_admin']],
+    refreshonly => true,
+    timeout      => 1800
+  }
+
+  exec { 'tutor_local_redo_init':
+    command      => 'tutor local do init',
+    user         => $tutor_user,
+    path         => ['/usr/bin', '/usr/local/bin'],
     refreshonly => true,
     timeout      => 1800
   }
@@ -245,6 +254,7 @@ class tutor (
     command     => 'tutor local exec lms reload-uwsgi',
     user        => $tutor_user,
     path        => ['/usr/bin', '/usr/local/bin'],
+    require     => Exec['tutor_local_do_init'],
     refreshonly => true,
   }
 }
