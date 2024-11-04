@@ -64,6 +64,7 @@ class tutor (
   String $admin_password,
   String $admin_email,
   Optional[Struct[{ date => String[1], path => String[1] }]] $backup_to_restore = undef,
+  Optional[Array[String]] $registration_email_patterns_allowed = undef,
 ) {
   $tutor_user = 'tutor'
   $openedx_docker_repository = 'overhangio/openedx'
@@ -141,6 +142,23 @@ class tutor (
     tutor_user        => $tutor_user,
     tutor_plugins_dir => $tutor_plugins_dir,
     content           => inline_epp($puppet_tutor_py_template),
+  }
+
+  if $registration_email_patterns_allowed {
+    $registration_email_plugin_template = @(END)
+    from tutor import hooks
+    hooks.Filters.ENV_PATCHES.add_item(("openedx-common-settings", """
+REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
+    <%- $registration_email_patterns_allowed.each |$index, $pattern| { -%>
+    "<%= $pattern %>",
+    <%- } -%>
+    ]"""))
+    |END
+    tutor::plugin { 'registration_email_patterns_allowed':
+      tutor_user        => $tutor_user,
+      tutor_plugins_dir => $tutor_plugins_dir,
+      content           => inline_epp($registration_email_plugin_template),
+    }
   }
 
   tutor::plugin { 'backup':
