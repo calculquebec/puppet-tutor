@@ -1,10 +1,12 @@
 define tutor::plugin (
-  String $tutor_user = 'tutor',
-  String $tutor_plugins_dir = "/${tutor_user}/.local/share/tutor-plugins",
   String $content = '',
   String $image = '',
-  Boolean $build_image_on_change = false,
+  Boolean $rebuild_image_on_content_change = false,
+  Boolean $reboot_on_change = false,
+  Boolean $enabled = true,
 ) {
+  $tutor_user = $tutor::tutor_user
+  $tutor_plugins_dir = $tutor::tutor_plugins_dir
 
   if $content != '' {
     file { "${tutor_plugins_dir}/${title}.py":
@@ -12,34 +14,40 @@ define tutor::plugin (
       owner   => $tutor_user,
       group   => $tutor_user,
       require => File[$tutor_plugins_dir],
+      before  => Exec["tutor_plugins_enable_${title}"],
       content => $content,
-      notify  => ($image == '' ? {
-                     true => Exec["tutor_plugins_enable_${title}"],
-                     false => Exec["tutor_plugins_enable_${title}", "tutor_images_build_${image}"],
-                 }),
     }
   }
 
-  exec { "tutor_plugins_enable_${title}":
-    command     => "tutor plugins enable ${title}",
-    unless      => "tutor plugins list | grep -w ${title} | grep -w enabled",
+  if $enabled {
+    $action = 'enable'
+    $check = 'enabled'
+  }
+  else {
+    $action = 'disable'
+    $check = 'installed'
+  }
+  exec { "tutor_plugins_${action}_${title}":
+    command     => "tutor plugins ${action} ${title}",
+    unless      => "tutor plugins list | grep -w ${title} | grep -w ${check}",
     user        => $tutor_user,
     path        => ['/usr/bin', '/usr/local/bin'],
-    notify      => ($image == '' ? {
-                     true  => Exec['tutor_config_save'],
-                     false => Exec['tutor_config_save', "tutor_images_build_${image}"],
+    notify      => ($reboot_on_change ? {
+                     false => Exec['tutor_config_save'],
+                     true  => Exec['tutor_config_save', 'tutor_local_reboot'],
                    }),
     require     => $require,
   }
 
   if $image != '' {
-    if $build_image_on_change {
+    if $rebuild_image_on_content_change {
       exec { "tutor_images_build_${image}":
         command     => "tutor images build ${image}",
         user        => $tutor_user,
         refreshonly => true,
         path        => ['/usr/bin', '/usr/local/bin'],
         timeout     => 1800,
+        subscribe   => File["${tutor_plugins_dir}/${title}.py"],
         notify      => Exec['tutor_local_reboot'],
       }
     }
@@ -51,11 +59,24 @@ define tutor::plugin (
         refreshonly => true,
         path        => ['/usr/bin', '/usr/local/bin'],
         timeout     => 1800,
+        notify      => Exec['tutor_local_reboot'],
       }
     }
   }
 }
+type TutorPlugin = Struct[
+  {
+    'rebuild_image_on_content_change' => Optional[Boolean],
+    'reboot_on_change'        => Optional[Boolean],
+    'content'                 => Optional[String],
+    'image'                   => Optional[String],
+    'enabled'                 => Optional[Boolean],
+  }
+]
 class tutor (
+  String $tutor_user = 'tutor',
+  String $tutor_plugins_dir = "/${tutor_user}/.local/share/tutor-plugins",
+  String $tutor_backup_dir = "/${tutor_user}/.local/share/tutor/env/backup/",
   String $version = '18.1.3',
   Array[Tuple[String, String]] $config,
   Array[Tuple[String, String]] $env_patches = [],
@@ -65,12 +86,9 @@ class tutor (
   String $admin_email,
   Optional[Struct[{ date => String[1], path => String[1] }]] $backup_to_restore = undef,
   Optional[Array[String]] $registration_email_patterns_allowed = undef,
+  Optional[Hash[String, Optional[TutorPlugin]]] $plugins = undef,
 ) {
-  $tutor_user = 'tutor'
   $openedx_docker_repository = 'overhangio/openedx'
-  $tutor_plugins_dir = "/${tutor_user}/.local/share/tutor-plugins"
-  $tutor_backup_dir = "/${tutor_user}/.local/share/tutor/env/backup/"
-  $puppet_tutor_py = "/${tutor_plugins_dir}/puppet_tutor.py"
 
   ensure_resource('class', 'tutor::base', { 'install_docker' => true, 'tutor_version' => $version })
 
@@ -139,8 +157,6 @@ class tutor (
   <% } %>
   |END
   tutor::plugin { 'puppet_tutor':
-    tutor_user        => $tutor_user,
-    tutor_plugins_dir => $tutor_plugins_dir,
     content           => inline_epp($puppet_tutor_py_template),
   }
 
@@ -155,14 +171,15 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
     ]"""))
     |END
     tutor::plugin { 'registration_email_patterns_allowed':
-      tutor_user        => $tutor_user,
-      tutor_plugins_dir => $tutor_plugins_dir,
       content           => inline_epp($registration_email_plugin_template),
     }
   }
 
+  if $plugins {
+    ensure_resources(tutor::plugin, $plugins)
+  }
+
   tutor::plugin { 'backup':
-    tutor_user => $tutor_user,
     image      => 'backup',
     require    => Package['tutor-contrib-backup'],
   }
@@ -175,10 +192,9 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
     """))
     |END
     tutor::plugin { 'brand_theme':
-      tutor_user            => $tutor_user,
-      image                 => 'mfe',
-      build_image_on_change => true,
-      content               => $brand_theme_patch,
+      image                           => 'mfe',
+      rebuild_image_on_content_change => true,
+      content                         => $brand_theme_patch,
     }
   }
 
