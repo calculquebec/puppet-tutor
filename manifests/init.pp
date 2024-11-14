@@ -157,7 +157,8 @@ class tutor (
   <% } %>
   |END
   tutor::plugin { 'puppet_tutor':
-    content           => inline_epp($puppet_tutor_py_template),
+    content => inline_epp($puppet_tutor_py_template),
+    notify  => Exec['tutor_config_save'],
   }
 
   if $registration_email_patterns_allowed {
