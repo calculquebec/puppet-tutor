@@ -79,7 +79,7 @@ class tutor (
   String $tutor_backup_dir = "/${tutor_user}/.local/share/tutor/env/backup/",
   String $version = '18.1.3',
   Hash[String, String] $config,
-  Array[Tuple[String, String]] $env_patches = [],
+  Optional[Hash[String, Array[String]]] $env_patches = undef,
   String $openedx_extra_pip_requirements = '',
   String $brand_theme_url = '',
   String $admin_password,
@@ -150,8 +150,10 @@ class tutor (
 
   $puppet_tutor_py_template = @(END)
   from tutor import hooks
-  <% $env_patches.each |$tuple| { %>
-  hooks.Filters.ENV_PATCHES.add_item(("<%= $tuple[0] %>", "<%= $tuple[1] %>"))
+  <% $env_patches.each |$key, $values| { %>
+  <% $values.each |$value| { %>
+  hooks.Filters.ENV_PATCHES.add_item(("<%= $key %>", """<%= $value %>"""))
+  <% } %>
   <% } %>
   |END
   tutor::plugin { 'puppet_tutor':
