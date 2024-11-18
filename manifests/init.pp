@@ -78,7 +78,7 @@ class tutor (
   String $tutor_plugins_dir = "/${tutor_user}/.local/share/tutor-plugins",
   String $tutor_backup_dir = "/${tutor_user}/.local/share/tutor/env/backup/",
   String $version = '18.1.3',
-  Array[Tuple[String, String]] $config,
+  Hash[String, String] $config,
   Array[Tuple[String, String]] $env_patches = [],
   String $openedx_extra_pip_requirements = '',
   String $brand_theme_url = '',
@@ -107,9 +107,7 @@ class tutor (
     ]
   }
 
-  $config.each |$tuple| {
-    $key   = $tuple[0]
-    $value = $tuple[1]
+  $config.each |$key, $value| {
     exec { "tutor_config_${key}":
       command => "tutor config save --set ${key}=\"${value}\"",
       unless  => "test \"$(tutor config printvalue ${key})\" == \"${value}\"",
