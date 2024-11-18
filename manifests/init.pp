@@ -4,6 +4,7 @@ define tutor::plugin (
   Boolean $rebuild_image_on_content_change = false,
   Boolean $reboot_on_change = false,
   Boolean $enabled = true,
+  String $source = '',
 ) {
   $tutor_user = $tutor::tutor_user
   $tutor_plugins_dir = $tutor::tutor_plugins_dir
@@ -16,6 +17,22 @@ define tutor::plugin (
       require => File[$tutor_plugins_dir],
       before  => Exec["tutor_plugins_enable_${title}"],
       content => $content,
+    }
+    if $rebuild_image_on_content_change {
+      File["${tutor_plugins_dir}/${title}.py"] ~> Exec['tutor_config_save'] ~> Exec["tutor_images_build_${image}_for_${title}"]
+    }
+  }
+
+  if $source != '' {
+    exec { "pip3 install ${title}":
+      command => "pip3 install --force-reinstall --no-deps --upgrade ${source}",
+      unless  => "pip3 freeze | grep -w ${source}",
+      user    => 'root',
+      path    => ['/usr/bin', '/usr/local/bin'],
+      before  => Exec["tutor_plugins_enable_${title}"],
+    }
+    if $rebuild_image_on_content_change {
+      Exec["pip3 install ${title}"] ~> Exec['tutor_config_save'] ~> Exec["tutor_images_build_${image}_for_${title}"]
     }
   }
 
@@ -41,18 +58,17 @@ define tutor::plugin (
 
   if $image != '' {
     if $rebuild_image_on_content_change {
-      exec { "tutor_images_build_${image}":
+      exec { "tutor_images_build_${image}_for_${title}":
         command     => "tutor images build ${image}",
         user        => $tutor_user,
         refreshonly => true,
         path        => ['/usr/bin', '/usr/local/bin'],
         timeout     => 1800,
-        subscribe   => File["${tutor_plugins_dir}/${title}.py"],
         notify      => Exec['tutor_local_reboot'],
       }
     }
     else {
-      exec { "tutor_images_build_${image}":
+      exec { "tutor_images_build_${image}_for_${title}":
         command     => "tutor images build ${image}",
         unless      => "docker images | grep -w ${image}",
         user        => $tutor_user,
@@ -71,6 +87,7 @@ type TutorPlugin = Struct[
     'content'                 => Optional[String],
     'image'                   => Optional[String],
     'enabled'                 => Optional[Boolean],
+    'source'                  => Optional[String],
   }
 ]
 class tutor (
