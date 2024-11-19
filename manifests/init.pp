@@ -97,7 +97,7 @@ class tutor (
   String $version = '18.1.3',
   Hash[String, String] $config,
   Optional[Hash[String, Array[String]]] $env_patches = undef,
-  String $openedx_extra_pip_requirements = '',
+  Array[String] $openedx_extra_pip_requirements = [],
   String $brand_theme_url = '',
   String $admin_password,
   String $admin_email,
@@ -134,9 +134,10 @@ class tutor (
     }
   }
 
-  if $openedx_extra_pip_requirements != '' {
+  if $openedx_extra_pip_requirements != [] {
     $key = 'OPENEDX_EXTRA_PIP_REQUIREMENTS'
-    $value = $openedx_extra_pip_requirements
+    $str_value = join($openedx_extra_pip_requirements, '\', \'')
+    $value = "['${str_value}']"
     exec { "tutor_config_${key}_${value}":
       command => "tutor config save --set ${key}=\"${value}\"",
       unless  => "test \"$(tutor config printvalue ${key})\" == \"${value}\"",
