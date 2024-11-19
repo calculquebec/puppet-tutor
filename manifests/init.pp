@@ -199,8 +199,9 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
   }
 
   tutor::plugin { 'backup':
-    image      => 'backup',
-    require    => Package['tutor-contrib-backup'],
+    require                         => Package['tutor-contrib-backup'],
+    image                           => 'backup',
+    rebuild_image_on_content_change => true,
   }
 
   if $brand_theme_url != '' {
