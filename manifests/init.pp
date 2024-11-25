@@ -21,6 +21,9 @@ define tutor::plugin (
     if $rebuild_image_on_content_change {
       File["${tutor_plugins_dir}/${title}.py"] ~> Exec['tutor_config_save'] ~> Exec["tutor_images_build_${image}_for_${title}"]
     }
+    else {
+      File["${tutor_plugins_dir}/${title}.py"] ~> Exec['tutor_config_save']
+    }
   }
 
   if $source != '' {
