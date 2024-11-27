@@ -70,16 +70,14 @@ define tutor::plugin (
         notify      => Exec['tutor_local_reboot'],
       }
     }
-    else {
-      exec { "tutor_images_build_${image}_for_${title}":
-        command     => "tutor images build ${image}",
-        unless      => "docker images | grep -w ${image}",
-        user        => $tutor_user,
-        refreshonly => true,
-        path        => ['/usr/bin', '/usr/local/bin'],
-        timeout     => 1800,
-        notify      => Exec['tutor_local_reboot'],
-      }
+    # need to build at least once if it does not exist
+    exec { "tutor_images_build_${image}_for_${title}":
+      command     => "tutor images build ${image}",
+      unless      => "docker images | grep -w ${image}",
+      user        => $tutor_user,
+      path        => ['/usr/bin', '/usr/local/bin'],
+      timeout     => 1800,
+      notify      => Exec['tutor_local_reboot'],
     }
   }
 }
@@ -202,9 +200,8 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
   }
 
   tutor::plugin { 'backup':
-    require                         => Package['tutor-contrib-backup'],
-    image                           => 'backup',
-    rebuild_image_on_content_change => true,
+    require => Package['tutor-contrib-backup'],
+    image   => 'backup',
   }
 
   if $brand_theme_url != '' {
