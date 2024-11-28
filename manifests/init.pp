@@ -19,7 +19,7 @@ define tutor::plugin (
       content => $content,
     }
     if $rebuild_image_on_content_change {
-      File["${tutor_plugins_dir}/${title}.py"] ~> Exec['tutor_config_save'] ~> Exec["tutor_images_build_${image}_for_${title}"]
+      File["${tutor_plugins_dir}/${title}.py"] ~> Exec['tutor_config_save'] ~> Exec["tutor_images_rebuild_${image}_for_${title}"]
     }
     else {
       File["${tutor_plugins_dir}/${title}.py"] ~> Exec['tutor_config_save']
@@ -35,7 +35,7 @@ define tutor::plugin (
       before  => Exec["tutor_plugins_enable_${title}"],
     }
     if $rebuild_image_on_content_change {
-      Exec["pip3 install ${title}"] ~> Exec['tutor_config_save'] ~> Exec["tutor_images_build_${image}_for_${title}"]
+      Exec["pip3 install ${title}"] ~> Exec['tutor_config_save'] ~> Exec["tutor_images_rebuild_${image}_for_${title}"]
     }
   }
 
@@ -61,7 +61,7 @@ define tutor::plugin (
 
   if $image != '' {
     if $rebuild_image_on_content_change {
-      exec { "tutor_images_build_${image}_for_${title}":
+      exec { "tutor_images_rebuild_${image}_for_${title}":
         command     => "tutor images build ${image}",
         user        => $tutor_user,
         refreshonly => true,
