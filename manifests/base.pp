@@ -32,8 +32,8 @@ class tutor::base (
   ensure_packages(['python3', 'python3-pip', 'libyaml-devel'])
 
   package { 'tutor':
-    ensure   => 'present',
-    name     => "tutor[full]==${tutor_version}",
+    ensure   => "${tutor_version}",
+    name     => 'tutor',
     provider => 'pip3',
     require  => [
       Service['docker'],
