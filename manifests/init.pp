@@ -212,8 +212,12 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
   }
 
   tutor::plugin { 'backup':
-    require => Package['tutor-contrib-backup'],
     image   => 'backup',
+    pip_dep => {
+                 'name'   => 'tutor-contrib-backup',
+                 'source' => 'git+https://github.com/hastexo/tutor-contrib-backup',
+                 'ensure' => 'v3.3.0',
+               }
   }
 
   if $brand_theme_url != '' {

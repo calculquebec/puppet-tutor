@@ -40,13 +40,4 @@ class tutor::base (
       Package['python3-pip']
     ]
   }
-
-  package { 'tutor-contrib-backup':
-    ensure   => 'present',
-    name     => "git+https://github.com/hastexo/tutor-contrib-backup@v${tutor_contrib_backup_version}",
-    provider => 'pip3',
-    require  => [
-      Package['python3-pip']
-    ]
-  }
 }
