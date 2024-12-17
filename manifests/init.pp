@@ -222,14 +222,8 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
     $date = $backup_to_restore['date']
     $path = $backup_to_restore['path']
     $filename = "backup.${date}.tar.xz"
-    file { "/${tutor_user}/.backup_restored":
-      ensure  => file,
-      content => $date,
-      require => [Tutor::Plugin['backup'], Exec['tutor_local_do_init']],
-      notify  => Exec["cp ${path}/${filename} ${tutor_backup_dir}"]
-    }
     exec { "cp ${path}/${filename} ${tutor_backup_dir}":
-      refreshonly => true,
+      unless      => "grep -w ${date} /${tutor_user}/.backup_restored",
       path        => ['/bin/', '/usr/bin'],
       notify      => Exec["chown -R root:root ${tutor_backup_dir}/${filename}"],
     }
@@ -243,6 +237,11 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
       user        => $tutor_user,
       path        => ['/usr/bin', '/usr/local/bin'],
       notify      => Exec['tutor_local_redo_init']
+    }
+    file { "/${tutor_user}/.backup_restored":
+      ensure  => file,
+      content => $date,
+      require => Exec["tutor local restore --date ${date}"],
     }
   }
 
