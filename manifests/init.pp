@@ -4,7 +4,11 @@ define tutor::plugin (
   Boolean $rebuild_image_on_content_change = false,
   Boolean $reboot_on_change = false,
   Boolean $enabled = true,
-  String $source = '',
+  Optional[Struct[{
+    'name'   => String,
+    'ensure' => String,
+    'source' => Optional[String],
+  }]] $pip_dep = undef
 ) {
   $tutor_user = $tutor::tutor_user
   $tutor_plugins_dir = $tutor::tutor_plugins_dir
@@ -26,16 +30,17 @@ define tutor::plugin (
     }
   }
 
-  if $source != '' {
-    exec { "pip3 install ${title}":
-      command => "pip3 install --force-reinstall --no-deps --upgrade ${source}",
-      unless  => "pip3 freeze | grep -w ${source}",
-      user    => 'root',
-      path    => ['/usr/bin', '/usr/local/bin'],
-      before  => Exec["tutor_plugins_enable_${title}"],
+  if $pip_dep {
+    package { $pip_dep['name']:
+      ensure   => $pip_dep['ensure'],
+      name     => $pip_dep['name'],
+      provider => 'pip3',
+      require  => Package['python3-pip'],
+      source   => $pip_dep['source'],
+      before   => Exec["tutor_plugins_enable_${title}"],
     }
     if $rebuild_image_on_content_change {
-      Exec["pip3 install ${title}"] ~> Exec['tutor_config_save'] ~> Exec["tutor_images_rebuild_${image}_for_${title}"]
+      Package[$pip_dep['name']] ~> Exec['tutor_config_save'] ~> Exec["tutor_images_rebuild_${image}_for_${title}"]
     }
   }
 
@@ -81,6 +86,13 @@ define tutor::plugin (
     }
   }
 }
+type PythonPackageDef = Struct[
+  {
+    'name'   => String,
+    'ensure' => String,
+    'source' => Optional[String],
+  }
+]
 type TutorPlugin = Struct[
   {
     'rebuild_image_on_content_change' => Optional[Boolean],
@@ -88,7 +100,7 @@ type TutorPlugin = Struct[
     'content'                 => Optional[String],
     'image'                   => Optional[String],
     'enabled'                 => Optional[Boolean],
-    'source'                  => Optional[String],
+    'pip_dep'                 => Optional[PythonPackageDef],
   }
 ]
 class tutor (
