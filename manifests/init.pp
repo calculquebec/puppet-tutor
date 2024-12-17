@@ -224,7 +224,7 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
     $filename = "backup.${date}.tar.xz"
     exec { "cp ${path}/${filename} ${tutor_backup_dir}":
       unless      => "grep -w ${date} /${tutor_user}/.backup_restored",
-      require     => [Tutor::Plugin['backup'], Exec['tutor_local_do_init']]
+      require     => [Tutor::Plugin['backup'], Exec['tutor_local_do_init']],
       path        => ['/bin/', '/usr/bin'],
       notify      => Exec["chown -R root:root ${tutor_backup_dir}/${filename}"],
     }
