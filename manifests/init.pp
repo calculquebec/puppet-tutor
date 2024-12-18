@@ -117,6 +117,7 @@ class tutor (
   Optional[Struct[{ date => String[1], path => String[1] }]] $backup_to_restore = undef,
   Optional[Array[String]] $registration_email_patterns_allowed = undef,
   Optional[Hash[String, Optional[TutorPlugin]]] $plugins = undef,
+  Optional[String] $upgrade_from = undef,
 ) {
   $openedx_docker_repository = 'overhangio/openedx'
 
@@ -260,6 +261,36 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
       ensure  => file,
       content => $date,
       require => Exec["tutor local restore --date ${date}"],
+    }
+  }
+
+  if $upgrade_from {
+    exec { 'upgrade_tutor_config_save':
+      command     => 'tutor config save',
+      user        => $tutor_user,
+      path        => ['/usr/bin', '/usr/local/bin'],
+      unless      => "grep ${upgrade_from} /${tutor_user}/.upgraded_from",
+      subscribe   => Package['tutor'],
+      refreshonly => true,
+    }
+    exec { "tutor images build all":
+      unless  => "grep ${upgrade_from} /${tutor_user}/.upgraded_from",
+      require => Exec['upgrade_tutor_config_save'],
+      notify  => Exec["tutor local upgrade --from=${upgrade_from}"],
+      user    => $tutor_user,
+      path    => ['/usr/bin', '/usr/local/bin'],
+      timeout => 1800
+    }
+    exec { "tutor local upgrade --from=${upgrade_from}":
+      refreshonly => true,
+      user        => $tutor_user,
+      path        => ['/usr/bin', '/usr/local/bin'],
+    }
+    file { "/${tutor_user}/.upgraded_from":
+      ensure  => file,
+      content => $upgrade_from,
+      require => Exec["tutor local upgrade --from=${upgrade_from}"],
+      notify  => Exec["tutor local dc pull"]
     }
   }
 
