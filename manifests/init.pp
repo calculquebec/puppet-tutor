@@ -240,7 +240,8 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
     $filename = "backup.${date}.tar.xz"
     exec { "cp ${path}/${filename} ${tutor_backup_dir}":
       unless      => "grep -w ${date} /${tutor_user}/.backup_restored",
-      require     => [Tutor::Plugin['backup'], Exec['tutor_local_do_init']],
+      require     => [Tutor::Plugin['backup']],
+      onlyif      => "test -f /${tutor_user}/.first_init_run",
       path        => ['/bin/', '/usr/bin'],
       notify      => Exec["chown -R root:root ${tutor_backup_dir}/${filename}"],
     }
@@ -253,7 +254,7 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
       refreshonly => true,
       user        => $tutor_user,
       path        => ['/usr/bin', '/usr/local/bin'],
-      notify      => Exec['tutor_local_redo_init']
+      notify      => Exec['tutor local do init']
     }
     file { "/${tutor_user}/.backup_restored":
       ensure  => file,
@@ -271,47 +272,42 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
     refreshonly => true,
   }
 
-  exec { 'tutor_local_dc_pull':
-    command => "tutor local dc pull",
+  exec { 'tutor local dc pull':
     unless  => "docker images ${openedx_docker_repository} | grep ${version}",
     user    => $tutor_user,
     path    => ['/usr/bin', '/usr/local/bin'],
-    notify  => [Exec['tutor_local_do_init'], Exec['tutor_create_admin']]
+    notify  => [Exec['tutor local do init'], Exec['tutor_create_admin']]
   }
 
-  exec { 'tutor_local_do_init':
-    command      => 'tutor local do init',
-    unless       => "tutor local status | grep tcp",
+  exec { 'tutor local do init':
     user         => $tutor_user,
     path         => ['/usr/bin', '/usr/local/bin'],
-    notify       => [Exec['tutor_create_admin']],
-    refreshonly => true,
+    refreshonly  => true,
     timeout      => 1800
   }
-
-  exec { 'tutor_local_redo_init':
-    command      => 'tutor local do init',
-    user         => $tutor_user,
-    path         => ['/usr/bin', '/usr/local/bin'],
-    refreshonly => true,
-    timeout      => 1800
+  file { "/${tutor_user}/.first_init_run":
+    ensure  => file,
+    require => Exec['tutor local do init'],
   }
 
   exec { 'tutor_create_admin':
     command     => "tutor local do createuser --staff --superuser admin ${admin_email} --password ${admin_password}",
-    onlyif      => "tutor local status | grep tcp",
     user        => $tutor_user,
     path        => ['/usr/bin', '/usr/local/bin'],
-    require     => Exec['tutor_local_do_init'],
-    refreshonly => true,
+    unless      => "grep ${admin_email} /${tutor_user}/.admin_created",
+    onlyif      => "tutor local status | grep tcp",
+  }
+  file { "/${tutor_user}/.admin_created":
+    ensure  => file,
+    content => $admin_email,
+    require => Exec['tutor_create_admin'],
   }
 
-  exec { 'tutor_local_start':
-    command => 'tutor local start --detach',
+  exec { 'tutor local start --detach':
     user    => $tutor_user,
     unless  => "tutor local status | grep overhangio/openedx | grep tcp",
     path    => ['/usr/bin', '/usr/local/bin'],
-    require => Exec['tutor_local_do_init'],
+    require => File["/${tutor_user}/.first_init_run"],
   }
 
   exec { 'tutor local reboot --detach':
@@ -323,7 +319,7 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
   exec { 'tutor local exec lms reload-uwsgi':
     user        => $tutor_user,
     path        => ['/usr/bin', '/usr/local/bin'],
-    require     => Exec['tutor_local_do_init'],
+    require     => File["/${tutor_user}/.first_init_run"],
     refreshonly => true,
   }
 }
