@@ -1,7 +1,6 @@
 class tutor::base (
   Boolean $install_docker = true,
   String $tutor_version = '18.1.3',
-  String $tutor_contrib_backup_version = '3.3.0'
 ) {
   $docker_packages = ['docker-ce', 'docker-ce-cli', 'containerd.io', 'docker-buildx-plugin', 'docker-compose-plugin']
 
