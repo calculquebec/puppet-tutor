@@ -1,14 +1,27 @@
+type PythonPackageDef = Struct[
+  {
+    'name'   => String,
+    'ensure' => String,
+    'source' => Optional[String],
+  }
+]
+type TutorPlugin = Struct[
+  {
+    'rebuild_image_on_content_change' => Optional[Boolean],
+    'reboot_on_change'        => Optional[Boolean],
+    'content'                 => Optional[String],
+    'image'                   => Optional[String],
+    'enabled'                 => Optional[Boolean],
+    'pip_dep'                 => Optional[PythonPackageDef],
+  }
+]
 define tutor::plugin (
   String $content = '',
   String $image = '',
   Boolean $rebuild_image_on_content_change = false,
   Boolean $reboot_on_change = false,
   Boolean $enabled = true,
-  Optional[Struct[{
-    'name'   => String,
-    'ensure' => String,
-    'source' => Optional[String],
-  }]] $pip_dep = undef
+  Optional[PythonPackageDef] $pip_dep = undef,
 ) {
   $tutor_user = $tutor::tutor_user
   $tutor_plugins_dir = $tutor::tutor_plugins_dir
@@ -86,23 +99,6 @@ define tutor::plugin (
     }
   }
 }
-type PythonPackageDef = Struct[
-  {
-    'name'   => String,
-    'ensure' => String,
-    'source' => Optional[String],
-  }
-]
-type TutorPlugin = Struct[
-  {
-    'rebuild_image_on_content_change' => Optional[Boolean],
-    'reboot_on_change'        => Optional[Boolean],
-    'content'                 => Optional[String],
-    'image'                   => Optional[String],
-    'enabled'                 => Optional[Boolean],
-    'pip_dep'                 => Optional[PythonPackageDef],
-  }
-]
 class tutor (
   String $tutor_user = 'tutor',
   String $tutor_plugins_dir = "/${tutor_user}/.local/share/tutor-plugins",
