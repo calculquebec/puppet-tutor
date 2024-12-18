@@ -75,7 +75,7 @@ define tutor::plugin (
     path        => ['/usr/bin', '/usr/local/bin'],
     notify      => ($reboot_on_change ? {
                      false => Exec['tutor_config_save'],
-                     true  => Exec['tutor_config_save', 'tutor_local_reboot'],
+                     true  => Exec['tutor_config_save', 'tutor local reboot --detach'],
                    }),
     require     => $require,
   }
@@ -88,7 +88,7 @@ define tutor::plugin (
         refreshonly => true,
         path        => ['/usr/bin', '/usr/local/bin'],
         timeout     => 1800,
-        notify      => Exec['tutor_local_reboot'],
+        notify      => Exec['tutor local reboot --detach'],
       }
     }
     # need to build at least once if it does not exist
@@ -98,7 +98,7 @@ define tutor::plugin (
       user        => $tutor_user,
       path        => ['/usr/bin', '/usr/local/bin'],
       timeout     => 1800,
-      notify      => Exec['tutor_local_reboot'],
+      notify      => Exec['tutor local reboot --detach'],
     }
   }
 }
@@ -165,7 +165,7 @@ class tutor (
     refreshonly => true,
     path        => ['/usr/bin', '/usr/local/bin'],
     timeout     => 1800,
-    notify      => Exec['tutor_local_reboot'],
+    notify      => Exec['tutor local reboot --detach'],
   }
 
   file { $tutor_plugins_dir:
@@ -313,8 +313,7 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
     require => Exec['tutor_local_do_init'],
   }
 
-  exec { 'tutor_local_reboot':
-    command     => 'tutor local reboot --detach',
+  exec { 'tutor local reboot --detach':
     user        => $tutor_user,
     path        => ['/usr/bin', '/usr/local/bin'],
     refreshonly => true,
