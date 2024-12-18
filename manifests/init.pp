@@ -143,7 +143,7 @@ class tutor (
       unless  => "test \"$(tutor config printvalue ${key})\" == \"${value}\"",
       user    => $tutor_user,
       path    => ['/usr/bin', '/usr/local/bin'],
-      notify  => Exec['tutor_local_exec_lms_reload-uwsgi']
+      notify  => Exec['tutor local exec lms reload-uwsgi']
     }
   }
 
@@ -266,7 +266,8 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
     command     => 'tutor config save',
     user        => $tutor_user,
     path        => ['/usr/bin', '/usr/local/bin'],
-    notify      => Exec['tutor_local_exec_lms_reload-uwsgi'],
+    notify      => Exec['tutor local exec lms reload-uwsgi'],
+    subscribe   => Package['tutor'],
     refreshonly => true,
   }
 
@@ -319,8 +320,7 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
     refreshonly => true,
   }
 
-  exec { 'tutor_local_exec_lms_reload-uwsgi':
-    command     => 'tutor local exec lms reload-uwsgi',
+  exec { 'tutor local exec lms reload-uwsgi':
     user        => $tutor_user,
     path        => ['/usr/bin', '/usr/local/bin'],
     require     => Exec['tutor_local_do_init'],
