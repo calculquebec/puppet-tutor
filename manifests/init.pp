@@ -35,7 +35,7 @@ define tutor::plugin (
       before  => Exec["tutor_plugins_enable_${title}"],
       content => $content,
     }
-    if $rebuild_image_on_content_change {
+    if $rebuild_image_on_content_change and $image != '' {
       File["${tutor_plugins_dir}/${title}.py"] ~> Exec['tutor_config_save'] ~> Exec["tutor_images_rebuild_${image}_for_${title}"]
     }
     else {
@@ -52,7 +52,7 @@ define tutor::plugin (
       source   => $pip_dep['source'],
       before   => Exec["tutor_plugins_enable_${title}"],
     }
-    if $rebuild_image_on_content_change {
+    if $rebuild_image_on_content_change and $image != '' {
       Package[$pip_dep['name']] ~> Exec['tutor_config_save'] ~> Exec["tutor_images_rebuild_${image}_for_${title}"]
     }
     else {
