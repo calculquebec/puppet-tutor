@@ -48,12 +48,15 @@ define tutor::plugin (
       ensure   => $pip_dep['ensure'],
       name     => $pip_dep['name'],
       provider => 'pip3',
-      require  => Package['python3-pip'],
+      require  => [Package['tutor'], Package['python3-pip']],
       source   => $pip_dep['source'],
       before   => Exec["tutor_plugins_enable_${title}"],
     }
     if $rebuild_image_on_content_change {
       Package[$pip_dep['name']] ~> Exec['tutor_config_save'] ~> Exec["tutor_images_rebuild_${image}_for_${title}"]
+    }
+    else {
+      Package[$pip_dep['name']] ~> Exec['tutor_config_save']
     }
   }
 
