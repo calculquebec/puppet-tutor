@@ -218,7 +218,8 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
                  'name'   => 'tutor-contrib-backup',
                  'source' => 'git+https://github.com/hastexo/tutor-contrib-backup',
                  'ensure' => "v${tutor_contrib_backup_version}",
-               }
+               },
+    require => File["/${tutor_user}/.first_init_run"]
   }
 
   if $brand_theme_url != '' {
@@ -260,7 +261,7 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
     file { "/${tutor_user}/.backup_restored":
       ensure  => file,
       content => $date,
-      require => Exec["tutor local restore --date ${date}"],
+      require => [Tutor::Plugin['backup'], Exec["tutor local restore --date ${date}"]],
     }
   }
 
@@ -305,9 +306,18 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
 
   exec { 'tutor local dc pull':
     unless  => "docker images ${openedx_docker_repository} | grep ${version}",
+    onlyif  => "test -f /${tutor_user}/.first_init_run}",
     user    => $tutor_user,
     path    => ['/usr/bin', '/usr/local/bin'],
-    notify  => [Exec['tutor local do init'], Exec['tutor_create_admin']]
+    notify  => [Exec['tutor local do init']]
+  }
+  exec { 'first tutor local dc pull':
+    command => 'tutor local dc pull',
+    unless  => "docker images ${openedx_docker_repository} | grep ${version}",
+    onlyif  => "test ! -f /${tutor_user}/.first_init_run}",
+    user    => $tutor_user,
+    path    => ['/usr/bin', '/usr/local/bin'],
+    notify  => [Exec['first tutor local do init'], Exec['tutor_create_admin']]
   }
 
   exec { 'tutor local do init':
@@ -316,9 +326,16 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
     refreshonly  => true,
     timeout      => 1800
   }
+  exec { 'first tutor local do init':
+    command      => 'tutor local do init',
+    user         => $tutor_user,
+    path         => ['/usr/bin', '/usr/local/bin'],
+    refreshonly  => true,
+    timeout      => 1800
+  }
   file { "/${tutor_user}/.first_init_run":
     ensure  => file,
-    require => Exec['tutor local do init'],
+    require => Exec['first tutor local do init'],
   }
 
   exec { 'tutor_create_admin':
