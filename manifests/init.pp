@@ -58,6 +58,9 @@ define tutor::plugin (
     else {
       Package[$pip_dep['name']] ~> Exec['tutor_config_save']
     }
+    if $upgrade_from {
+      Package[$pip_dep['name']] ~> Exec['upgrade_tutor_config_save']
+    }
   }
 
   if $enabled {
@@ -166,6 +169,7 @@ class tutor (
     refreshonly => true,
     path        => ['/usr/bin', '/usr/local/bin'],
     timeout     => 1800,
+    require     => File["/${tutor_user}/.first_init_run"],
     notify      => Exec['tutor local reboot --detach'],
   }
 
@@ -271,7 +275,7 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
       user        => $tutor_user,
       path        => ['/usr/bin', '/usr/local/bin'],
       unless      => "grep ${upgrade_from} /${tutor_user}/.upgraded_from",
-      subscribe   => Package['tutor'],
+      subscribe   => [Package['tutor'], Tutor::Plugin['backup']],
       refreshonly => true,
     }
     exec { "tutor images build all":
@@ -280,7 +284,7 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
       notify  => Exec["tutor local upgrade --from=${upgrade_from}"],
       user    => $tutor_user,
       path    => ['/usr/bin', '/usr/local/bin'],
-      timeout => 1800
+      timeout => 3600
     }
     exec { "tutor local upgrade --from=${upgrade_from}":
       refreshonly => true,
@@ -305,7 +309,7 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
   }
 
   exec { 'tutor local dc pull':
-    unless  => "docker images ${openedx_docker_repository} | grep ${version}",
+    unless  => "docker images ${openedx_docker_repository} | grep openedx",
     onlyif  => "test -f /${tutor_user}/.first_init_run}",
     user    => $tutor_user,
     path    => ['/usr/bin', '/usr/local/bin'],
@@ -313,7 +317,7 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
   }
   exec { 'first tutor local dc pull':
     command => 'tutor local dc pull',
-    unless  => "docker images ${openedx_docker_repository} | grep ${version}",
+    unless  => "docker images ${openedx_docker_repository} | grep openedx",
     onlyif  => "test ! -f /${tutor_user}/.first_init_run}",
     user    => $tutor_user,
     path    => ['/usr/bin', '/usr/local/bin'],
