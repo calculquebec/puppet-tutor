@@ -7,101 +7,94 @@ type PythonPackageDef = Struct[
 ]
 type TutorPlugin = Struct[
   {
-    'rebuild_image_on_content_change' => Optional[Boolean],
-    'reboot_on_change'        => Optional[Boolean],
-    'content'                 => Optional[String],
-    'image'                   => Optional[String],
-    'enabled'                 => Optional[Boolean],
-    'pip_dep'                 => Optional[PythonPackageDef],
+    'reboot_on_change' => Optional[Boolean],
+    'reinit_on_change' => Optional[Boolean],
+    'enabled'          => Optional[Boolean],
+    'images'           => Array[String],
+    'dep'              => Variant[String[1], PythonPackageDef],
   }
 ]
-define tutor::plugin (
-  String $content = '',
-  String $image = '',
-  Boolean $rebuild_image_on_content_change = false,
-  Boolean $reboot_on_change = false,
-  Boolean $enabled = true,
-  Optional[PythonPackageDef] $pip_dep = undef,
+define tutor::plugin_dep (
+  Variant[String[1], PythonPackageDef] $dep
 ) {
   $tutor_user = $tutor::tutor_user
-  $tutor_plugins_dir = $tutor::tutor_plugins_dir
-
-  if $content != '' {
+  if $dep =~ String {
+    $tutor_plugins_dir = $tutor::tutor_plugins_dir
     file { "${tutor_plugins_dir}/${title}.py":
       ensure  => 'present',
       owner   => $tutor_user,
       group   => $tutor_user,
       require => File[$tutor_plugins_dir],
-      before  => Exec["tutor_plugins_enable_${title}"],
-      content => $content,
-    }
-    if $rebuild_image_on_content_change and $image != '' {
-      File["${tutor_plugins_dir}/${title}.py"] ~> Exec['tutor_config_save'] ~> Exec["tutor_images_rebuild_${image}_for_${title}"]
-    }
-    else {
-      File["${tutor_plugins_dir}/${title}.py"] ~> Exec['tutor_config_save']
+      before  => Exec['tutor config save'],
+      content => $dep,
     }
   }
-
-  if $pip_dep {
-    package { $pip_dep['name']:
-      ensure   => $pip_dep['ensure'],
-      name     => $pip_dep['name'],
+  else {
+    package { $dep['name']:
+      ensure   => $dep['ensure'],
+      name     => $dep['name'],
       provider => 'pip3',
       require  => [Package['tutor'], Package['python3-pip']],
-      source   => $pip_dep['source'],
-      before   => Exec["tutor_plugins_enable_${title}"],
-    }
-    if $rebuild_image_on_content_change and $image != '' {
-      Package[$pip_dep['name']] ~> Exec['tutor_config_save'] ~> Exec["tutor_images_rebuild_${image}_for_${title}"]
-    }
-    else {
-      Package[$pip_dep['name']] ~> Exec['tutor_config_save']
-    }
-    if $upgrade_from {
-      Package[$pip_dep['name']] ~> Exec['upgrade_tutor_config_save']
+      before   => Exec['tutor config save'],
+      source   => $dep['source'],
     }
   }
+}
+define tutor::plugin (
+  Array[String] $images = [],
+  Boolean $reboot_on_change = false,
+  Boolean $reinit_on_change = false,
+  Boolean $enabled = true,
+  Variant[String[1], PythonPackageDef] $dep,
+) {
+  $tutor_user = $tutor::tutor_user
+
+  tutor::plugin_dep { $title: dep => $dep }
 
   if $enabled {
     $action = 'enable'
     $check = 'enabled'
+    # ensure all plugins deps have been updated before this action
+    Tutor::Plugin_dep <||> -> Exec["tutor_plugins_${action}_${title}"]
   }
   else {
     $action = 'disable'
     $check = 'installed'
   }
   exec { "tutor_plugins_${action}_${title}":
-    command     => "tutor plugins ${action} ${title}",
-    unless      => "tutor plugins list | grep -w ${title} | grep -w ${check}",
-    user        => $tutor_user,
-    path        => ['/usr/bin', '/usr/local/bin'],
-    notify      => ($reboot_on_change ? {
-                     false => Exec['tutor_config_save'],
-                     true  => Exec['tutor_config_save', 'tutor local reboot --detach'],
-                   }),
-    require     => $require,
+    command => "tutor plugins ${action} ${title}",
+    unless  => "tutor plugins list | grep -w ${title} | grep -w ${check}",
+    user    => $tutor_user,
+    path    => ['/usr/bin', '/usr/local/bin'],
+    notify  => ($reboot_on_change ? {
+                  false => Exec['tutor config save'],
+                  true  => Exec['tutor config save', 'tutor local reboot --detach'],
+                }),
+    before  => Exec['tutor config save'],
+    require => $require,
   }
 
-  if $image != '' {
-    if $rebuild_image_on_content_change {
-      exec { "tutor_images_rebuild_${image}_for_${title}":
-        command     => "tutor images build ${image}",
+  $images.each |String $image| {
+    Tutor::Plugin_dep[$title] ~> Exec["tutor images rebuild ${image}"]
+    if $image == 'openedx' {
+      $options = '--no-cache'
+    }
+    else {
+      $options = ''
+    }
+    ensure_resource('exec', "tutor images rebuild ${image}", {
+        command     => "tutor images build ${image} ${options}",
         user        => $tutor_user,
         refreshonly => true,
         path        => ['/usr/bin', '/usr/local/bin'],
         timeout     => 1800,
-        notify      => Exec['tutor local reboot --detach'],
-      }
+        require     => Exec['tutor config save'],
+    })
+    if $reboot_on_change {
+      Exec["tutor images rebuild ${image}"] ~> Exec['tutor local reboot --detach']
     }
-    # need to build at least once if it does not exist
-    exec { "tutor_images_build_${image}_for_${title}":
-      command     => "tutor images build ${image}",
-      unless      => "docker images | grep -w ${image}",
-      user        => $tutor_user,
-      path        => ['/usr/bin', '/usr/local/bin'],
-      timeout     => 1800,
-      notify      => Exec['tutor local reboot --detach'],
+    if $reinit_on_change {
+      Exec["tutor images rebuild ${image}"] ~> Exec['tutor local do init']
     }
   }
 }
@@ -160,10 +153,10 @@ class tutor (
       unless  => "test \"$(tutor config printvalue ${key})\" == \"${value}\"",
       user    => $tutor_user,
       path    => ['/usr/bin', '/usr/local/bin'],
-      notify  => Exec['tutor_images_build_openedx']
+      notify  => Exec['tutor images build openedx']
     }
   }
-  exec { "tutor_images_build_openedx":
+  exec { "tutor images build openedx":
     command     => "tutor images build openedx",
     user        => $tutor_user,
     refreshonly => true,
@@ -193,8 +186,8 @@ class tutor (
   <% } %>
   |END
   tutor::plugin { 'puppet_tutor':
-    content => inline_epp($puppet_tutor_py_template),
-    notify  => Exec['tutor_config_save'],
+    dep     => inline_epp($puppet_tutor_py_template),
+    notify  => Exec['tutor config save'],
   }
 
   if $registration_email_patterns_allowed {
@@ -208,7 +201,7 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
     ]"""))
     |END
     tutor::plugin { 'registration_email_patterns_allowed':
-      content           => inline_epp($registration_email_plugin_template),
+      dep => inline_epp($registration_email_plugin_template),
     }
   }
 
@@ -217,8 +210,8 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
   }
 
   tutor::plugin { 'backup':
-    image   => 'backup',
-    pip_dep => {
+    images  => ['backup'],
+    dep     => {
                  'name'   => 'tutor-contrib-backup',
                  'source' => 'git+https://github.com/hastexo/tutor-contrib-backup',
                  'ensure' => "v${tutor_contrib_backup_version}",
@@ -234,9 +227,8 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
     """))
     |END
     tutor::plugin { 'brand_theme':
-      image                           => 'mfe',
-      rebuild_image_on_content_change => true,
-      content                         => $brand_theme_patch,
+      images => ['mfe'],
+      dep    => $brand_theme_patch,
     }
   }
 
@@ -270,6 +262,8 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
   }
 
   if $upgrade_from {
+    # ensure all plugs have updated
+    Tutor::Plugin_dep <||> -> Exec['upgrade_tutor_config_save']
     exec { 'upgrade_tutor_config_save':
       command     => 'tutor config save',
       user        => $tutor_user,
@@ -299,7 +293,7 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
     }
   }
 
-  exec { 'tutor_config_save':
+  exec { 'tutor config save':
     command     => 'tutor config save',
     user        => $tutor_user,
     path        => ['/usr/bin', '/usr/local/bin'],
