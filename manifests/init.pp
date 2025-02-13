@@ -10,7 +10,7 @@ type TutorPlugin = Struct[
     'reboot_on_change' => Optional[Boolean],
     'reinit_on_change' => Optional[Boolean],
     'enabled'          => Optional[Boolean],
-    'images'           => Array[String],
+    'images'           => Optional[Array[String]],
     'dep'              => Variant[String[1], PythonPackageDef],
   }
 ]
