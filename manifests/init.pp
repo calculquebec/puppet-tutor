@@ -299,16 +299,20 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
     path        => ['/usr/bin', '/usr/local/bin'],
     notify      => Exec['tutor local exec lms reload-uwsgi'],
     subscribe   => Package['tutor'],
+    before      => Exec['tutor local dc pull'],
     refreshonly => true,
   }
 
   exec { 'tutor local dc pull':
-    unless  => "docker images ${openedx_docker_repository} | grep openedx",
-    onlyif  => "test -f /${tutor_user}/.first_init_run}",
-    user    => $tutor_user,
-    path    => ['/usr/bin', '/usr/local/bin'],
-    notify  => [Exec['tutor local do init']]
+    unless    => "docker images ${openedx_docker_repository} | grep openedx",
+    onlyif    => "test -f /${tutor_user}/.first_init_run}",
+    user      => $tutor_user,
+    path      => ['/usr/bin', '/usr/local/bin'],
+    subscribe => Package['tutor'],
+    notify    => [Exec['tutor local do init']],
+    before    => [Exec['tutor local exec lms reload-uwsgi']]
   }
+
   exec { 'first tutor local dc pull':
     command => 'tutor local dc pull',
     unless  => "docker images ${openedx_docker_repository} | grep openedx",
@@ -319,10 +323,12 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
   }
 
   exec { 'tutor local do init':
-    user         => $tutor_user,
-    path         => ['/usr/bin', '/usr/local/bin'],
-    refreshonly  => true,
-    timeout      => 1800
+    user        => $tutor_user,
+    path        => ['/usr/bin', '/usr/local/bin'],
+    refreshonly => true,
+    timeout     => 1800,
+    subscribe   => [Exec['tutor local dc pull']],
+    before      => [Exec['tutor local exec lms reload-uwsgi']]
   }
   exec { 'first tutor local do init':
     command      => 'tutor local do init',
