@@ -73,6 +73,9 @@ define tutor::plugin (
     before  => Exec['tutor config save'],
     require => $require,
   }
+  if $reinit_on_change {
+    Exec["tutor_plugins_${action}_${title}"] ~> Exec['tutor local do init']
+  }
 
   $images.each |String $image| {
     Tutor::Plugin_dep[$title] ~> Exec["tutor images rebuild ${image}"]
