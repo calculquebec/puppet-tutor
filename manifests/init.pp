@@ -25,7 +25,7 @@ define tutor::plugin_dep (
       owner   => $tutor_user,
       group   => $tutor_user,
       require => File[$tutor_plugins_dir],
-      before  => Exec['tutor config save'],
+      notify  => Exec['tutor config save'],
       content => $dep,
     }
   }
