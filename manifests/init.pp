@@ -5,21 +5,35 @@ type PythonPackageDef = Struct[
     'source' => Optional[String],
   }
 ]
+type PluginFileURL = Struct[
+  {
+    'url' =>  String[1],
+  }
+]
 type TutorPlugin = Struct[
   {
     'reboot_on_change' => Optional[Boolean],
     'reinit_on_change' => Optional[Boolean],
     'enabled'          => Optional[Boolean],
     'images'           => Optional[Array[String]],
-    'dep'              => Variant[String[1], PythonPackageDef],
+    'dep'              => Variant[PluginFileURL, String[1], PythonPackageDef],
   }
 ]
 define tutor::plugin_dep (
-  Variant[String[1], PythonPackageDef] $dep
+  Variant[PluginFileURL, String[1], PythonPackageDef] $dep
 ) {
   $tutor_user = $tutor::tutor_user
-  if $dep =~ String {
-    $tutor_plugins_dir = $tutor::tutor_plugins_dir
+  $tutor_plugins_dir = $tutor::tutor_plugins_dir
+  if $dep.is_a(PluginFileURL) {
+    exec { "cp ${tutor_plugins_dir}/${title}.download ${tutor_plugins_dir}/${title}.py":
+      unless  => "diff ${tutor_plugins_dir}/${title}.download ${tutor_plugins_dir}/${title}.py",
+      user    => $tutor_user,
+      path    => ['/usr/bin', '/usr/local/bin'],
+      notify  => Exec['tutor config save'],
+      require => File["${tutor_plugins_dir}/${title}.download"],
+    }
+  }
+  if $dep.is_a(String) {
     file { "${tutor_plugins_dir}/${title}.py":
       ensure  => 'present',
       owner   => $tutor_user,
@@ -29,7 +43,7 @@ define tutor::plugin_dep (
       content => $dep,
     }
   }
-  else {
+  if $dep.is_a(PythonPackageDef) {
     package { $dep['name']:
       ensure   => $dep['ensure'],
       name     => $dep['name'],
@@ -45,10 +59,20 @@ define tutor::plugin (
   Boolean $reboot_on_change = false,
   Boolean $reinit_on_change = false,
   Boolean $enabled = true,
-  Variant[String[1], PythonPackageDef] $dep,
+  Variant[PluginFileURL, String[1], PythonPackageDef] $dep,
 ) {
   $tutor_user = $tutor::tutor_user
+  $tutor_plugins_dir = $tutor::tutor_plugins_dir
 
+  if $dep.is_a(PluginFileURL) {
+    file { "${tutor_plugins_dir}/${title}.download":
+      ensure   => 'present',
+      owner    => $tutor_user,
+      group    => $tutor_user,
+      require  => File[$tutor_plugins_dir],
+      source   => $dep['url'],
+    }
+  }
   tutor::plugin_dep { $title: dep => $dep }
 
   if $enabled {
