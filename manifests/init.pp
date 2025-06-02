@@ -10,17 +10,23 @@ type PluginFileURL = Struct[
     'url' =>  String[1],
   }
 ]
+type PluginArchive = Struct[
+  {
+    'source'   => String[1],
+    'filename' => String[1],
+  }
+]
 type TutorPlugin = Struct[
   {
     'reboot_on_change' => Optional[Boolean],
     'reinit_on_change' => Optional[Boolean],
     'enabled'          => Optional[Boolean],
     'images'           => Optional[Array[String]],
-    'dep'              => Variant[PluginFileURL, String[1], PythonPackageDef],
+    'dep'              => Variant[PluginFileURL, String[1], PythonPackageDef, PluginArchive],
   }
 ]
 define tutor::plugin_dep (
-  Variant[PluginFileURL, String[1], PythonPackageDef] $dep
+  Variant[PluginFileURL, String[1], PythonPackageDef, PluginArchive] $dep
 ) {
   $tutor_user = $tutor::tutor_user
   $tutor_plugins_dir = $tutor::tutor_plugins_dir
@@ -31,6 +37,20 @@ define tutor::plugin_dep (
       path    => ['/usr/bin', '/usr/local/bin'],
       notify  => Exec['tutor config save'],
       require => File["${tutor_plugins_dir}/${title}.download"],
+    }
+  }
+  if $dep.is_a(PluginArchive) {
+    $filename = $dep['filename']
+    $source = $dep['source']
+    archive { $filename:
+      path            => "/opt/puppetlabs/puppet/cache/puppet-archive/${filename}",
+      extract         => true,
+      extract_path    => '/tutor/.local/share/tutor-plugins/',
+      extract_command => 'tar xf %s --strip-components=1',
+      source          => $source,
+      user            => $tutor_user,
+      group           => $tutor_user,
+      notify          => Exec['tutor config save'],
     }
   }
   if $dep.is_a(String) {
@@ -59,7 +79,7 @@ define tutor::plugin (
   Boolean $reboot_on_change = false,
   Boolean $reinit_on_change = false,
   Boolean $enabled = true,
-  Variant[PluginFileURL, String[1], PythonPackageDef] $dep,
+  Variant[PluginFileURL, String[1], PythonPackageDef, PluginArchive] $dep,
 ) {
   $tutor_user = $tutor::tutor_user
   $tutor_plugins_dir = $tutor::tutor_plugins_dir
