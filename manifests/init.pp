@@ -145,6 +145,51 @@ define tutor::plugin (
     }
   }
 }
+type TutorTheme = Struct[
+  {
+    'enabled'         => Optional[Boolean],
+    'source_url'      => String[1],
+    'archive_name'    => String[1],
+    'extract_options' => Optional[String[1]],
+  }
+]
+define tutor::theme (
+  Boolean $enabled = false,
+  String[1] $source_url,
+  String[1] $archive_name,
+  Optional[String[1]] $extract_options = undef,
+) {
+  $tutor_user = $tutor::tutor_user
+  $tutor_plugins_dir = $tutor::tutor_plugins_dir
+  $theme_path = "/${tutor_user}/.local/share/tutor/env/build/openedx/themes/${title}"
+
+  file { $theme_path:
+    ensure => 'directory',
+    owner  => $tutor_user,
+    group  => $tutor_user,
+  }
+  archive { $archive_name:
+    path            => "/opt/puppetlabs/puppet/cache/puppet-archive/${title}-${archive_name}",
+    extract         => true,
+    extract_path    => $theme_path,
+    extract_command => "tar xf %s ${extract_options}",
+    source          => "${source_url}/${archive_name}",
+    user            => $tutor_user,
+    group           => $tutor_user,
+    notify          => Exec['tutor images build openedx'],
+    require         => File[$theme_path],
+  }
+
+  if $enabled {
+    exec { "tutor local do settheme ${title}":
+      path        => ['/usr/bin', '/usr/local/bin'],
+      user        => $tutor_user,
+      refreshonly => true,
+      subscribe   => Archive[$archive_name],
+      before      => [Exec['tutor config save'], Exec['tutor images build openedx']],
+    }
+  }
+}
 class tutor (
   String $tutor_user = 'tutor',
   String $tutor_plugins_dir = "/${tutor_user}/.local/share/tutor-plugins",
@@ -160,6 +205,7 @@ class tutor (
   Optional[Struct[{ date => String[1], path => String[1] }]] $backup_to_restore = undef,
   Optional[Array[String]] $registration_email_patterns_allowed = undef,
   Optional[Hash[String, Optional[TutorPlugin]]] $plugins = undef,
+  Optional[Hash[String, TutorTheme]] $themes = undef,
   Optional[String] $upgrade_from = undef,
 ) {
   $openedx_docker_repository = 'overhangio/openedx'
@@ -254,6 +300,9 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
 
   if $plugins {
     ensure_resources(tutor::plugin, $plugins)
+  }
+  if $themes {
+    ensure_resources(tutor::theme, $themes)
   }
 
   tutor::plugin { 'backup':
