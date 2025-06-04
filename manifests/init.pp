@@ -190,6 +190,7 @@ define tutor::theme (
       refreshonly => true,
       subscribe   => Archive[$archive_name],
       before      => [Exec['tutor config save'], Exec['tutor images build openedx']],
+      require     => File["/${tutor_user}/.first_init_run"],
     }
   }
 }
@@ -315,7 +316,6 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
                  'source' => 'git+https://github.com/hastexo/tutor-contrib-backup',
                  'ensure' => "v${tutor_contrib_backup_version}",
                },
-    require => File["/${tutor_user}/.first_init_run"]
   }
 
   if $brand_theme_url != '' {
