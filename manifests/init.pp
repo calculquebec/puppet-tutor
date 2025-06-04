@@ -36,6 +36,7 @@ define tutor::plugin_dep (
       user    => $tutor_user,
       path    => ['/usr/bin', '/usr/local/bin'],
       notify  => Exec['tutor config save'],
+      before  => Exec['first tutor local dc pull'],
       require => File["${tutor_plugins_dir}/${title}.download"],
     }
   }
@@ -50,6 +51,7 @@ define tutor::plugin_dep (
       source          => $source,
       user            => $tutor_user,
       group           => $tutor_user,
+      before          => Exec['first tutor local dc pull'],
       notify          => Exec['tutor config save'],
     }
   }
@@ -60,6 +62,7 @@ define tutor::plugin_dep (
       group   => $tutor_user,
       require => File[$tutor_plugins_dir],
       notify  => Exec['tutor config save'],
+      before  => Exec['first tutor local dc pull'],
       content => $dep,
     }
   }
@@ -69,7 +72,7 @@ define tutor::plugin_dep (
       name     => $dep['name'],
       provider => 'pip3',
       require  => [Package['tutor'], Package['python3-pip']],
-      before   => Exec['tutor config save'],
+      before   => [Exec['first tutor local dc pull'], Exec['tutor config save']],
       source   => $dep['source'],
     }
   }
