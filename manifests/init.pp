@@ -458,7 +458,7 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
     user    => $tutor_user,
     unless  => "tutor local status | grep overhangio/openedx | grep tcp",
     path    => ['/usr/bin', '/usr/local/bin'],
-    require => File["/${tutor_user}/.first_init_run"],
+    require => [Exec['tutor config save'],File["/${tutor_user}/.first_init_run"]],
   }
 
   exec { 'tutor local reboot --detach':
