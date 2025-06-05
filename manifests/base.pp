@@ -28,15 +28,19 @@ class tutor::base (
     }
   }
 
-  ensure_packages(['python3', 'python3-pip', 'libyaml-devel'])
-
+  ensure_packages(['python3.11', 'python3.11-pip', 'libyaml-devel'])
+  file { '/usr/bin/pip3':
+    target => '/usr/bin/pip3.11',
+    ensure => 'link',
+    before => Package['python3.11-pip'],
+  }
   package { 'tutor':
     ensure   => "${tutor_version}",
     name     => 'tutor',
     provider => 'pip3',
     require  => [
       Service['docker'],
-      Package['python3-pip']
+      Package['python3.11-pip']
     ]
   }
 }

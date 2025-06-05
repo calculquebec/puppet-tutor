@@ -71,7 +71,7 @@ define tutor::plugin_dep (
       ensure   => $dep['ensure'],
       name     => $dep['name'],
       provider => 'pip3',
-      require  => [Package['tutor'], Package['python3-pip']],
+      require  => [Package['tutor'], Package['python3.11-pip']],
       before   => [Exec['first tutor local dc pull'], Exec['tutor config save']],
       source   => $dep['source'],
     }
@@ -103,6 +103,8 @@ define tutor::plugin (
     $check = 'enabled'
     # ensure all plugins deps have been updated before this action
     Tutor::Plugin_dep <||> -> Exec["tutor_plugins_${action}_${title}"]
+    # ensure this action is before the first pull
+    Exec["tutor_plugins_${action}_${title}"] -> Exec['first tutor local dc pull']
   }
   else {
     $action = 'disable'
@@ -259,7 +261,7 @@ class tutor (
     refreshonly => true,
     path        => ['/usr/bin', '/usr/local/bin'],
     timeout     => 1800,
-    require     => File["/${tutor_user}/.first_init_run"],
+    require     => [Exec['tutor config save'], File["/${tutor_user}/.first_init_run"]],
     notify      => Exec['tutor local reboot --detach'],
   }
 
