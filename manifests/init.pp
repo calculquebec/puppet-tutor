@@ -104,7 +104,9 @@ define tutor::plugin (
     # ensure all plugins deps have been updated before this action
     Tutor::Plugin_dep <||> -> Exec["tutor_plugins_${action}_${title}"]
     # ensure this action is before the first pull
-    Exec["tutor_plugins_${action}_${title}"] -> Exec['first tutor local dc pull']
+    unless $reinit_on_change {
+      Exec["tutor_plugins_${action}_${title}"] -> Exec['first tutor local dc pull']
+    }
   }
   else {
     $action = 'disable'
@@ -123,7 +125,7 @@ define tutor::plugin (
     require => $require,
   }
   if $reinit_on_change {
-    Exec["tutor_plugins_${action}_${title}"] ~> Exec['tutor local do init']
+    File["/${tutor_user}/.first_init_run"] -> Exec["tutor_plugins_${action}_${title}"] ~> Exec['tutor local do init']
   }
 
   $images.each |String $image| {
@@ -256,7 +258,7 @@ class tutor (
     }
   }
   exec { "tutor images build openedx":
-    command     => "tutor images build openedx",
+    command     => "tutor images build openedx --no-cache",
     user        => $tutor_user,
     refreshonly => true,
     path        => ['/usr/bin', '/usr/local/bin'],
