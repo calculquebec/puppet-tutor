@@ -122,7 +122,6 @@ define tutor::plugin (
                   true  => Exec['tutor config save', 'tutor local reboot --detach'],
                 }),
     before  => Exec['tutor config save'],
-    require => $require,
   }
   if $reinit_on_change {
     File["/${tutor_user}/.first_init_run"] -> Exec["tutor_plugins_${action}_${title}"] ~> Exec['tutor local do init']
