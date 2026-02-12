@@ -142,6 +142,7 @@ define tutor::plugin (
         path        => ['/usr/bin', '/usr/local/bin'],
         timeout     => 1800,
         require     => Exec['tutor config save'],
+        before      => [Exec['tutor local start --detach'], Exec['tutor local reboot --detach']],
     })
     if $reboot_on_change {
       Exec["tutor images rebuild ${image}"] ~> Exec['tutor local reboot --detach']
