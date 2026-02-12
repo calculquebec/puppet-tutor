@@ -240,7 +240,7 @@ class tutor (
       unless  => "test \"$(tutor config printvalue ${key})\" == \"${value}\"",
       user    => $tutor_user,
       path    => ['/usr/bin', '/usr/local/bin'],
-      notify  => Exec['tutor local exec lms reload-uwsgi']
+      notify  => Exec['tutor local reboot --detach']
     }
   }
 
@@ -264,6 +264,7 @@ class tutor (
     timeout     => 1800,
     require     => [Exec['tutor config save'], File["/${tutor_user}/.first_init_run"]],
     notify      => Exec['tutor local reboot --detach'],
+    subscribe   => Exec['tutor local dc pull']
   }
 
   file { $tutor_plugins_dir:
@@ -399,7 +400,7 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
     command     => 'tutor config save',
     user        => $tutor_user,
     path        => ['/usr/bin', '/usr/local/bin'],
-    notify      => Exec['tutor local exec lms reload-uwsgi'],
+    notify      => Exec['tutor local reboot --detach'],
     subscribe   => Package['tutor'],
     before      => Exec['tutor local dc pull'],
     refreshonly => true,
@@ -412,7 +413,7 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
     path      => ['/usr/bin', '/usr/local/bin'],
     subscribe => Package['tutor'],
     notify    => [Exec['tutor local do init']],
-    before    => [Exec['tutor local exec lms reload-uwsgi']]
+    before    => [Exec['tutor local reboot --detach']]
   }
 
   exec { 'first tutor local dc pull':
@@ -430,7 +431,7 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
     refreshonly => true,
     timeout     => 1800,
     subscribe   => [Exec['tutor local dc pull']],
-    before      => [Exec['tutor local exec lms reload-uwsgi']]
+    before      => [Exec['tutor local reboot --detach']]
   }
   exec { 'first tutor local do init':
     command      => 'tutor local do init',
@@ -470,10 +471,4 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
     refreshonly => true,
   }
 
-  exec { 'tutor local exec lms reload-uwsgi':
-    user        => $tutor_user,
-    path        => ['/usr/bin', '/usr/local/bin'],
-    require     => File["/${tutor_user}/.first_init_run"],
-    refreshonly => true,
-  }
 }
