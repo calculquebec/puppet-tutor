@@ -193,8 +193,7 @@ define tutor::theme (
       user        => $tutor_user,
       refreshonly => true,
       subscribe   => Archive[$archive_name],
-      before      => [Exec['tutor config save'], Exec['tutor images build openedx']],
-      require     => File["/${tutor_user}/.first_init_run"],
+      require     => [Exec['tutor local do init'], Exec['tutor images build openedx'], File["/${tutor_user}/.first_init_run"]],
     }
   }
 }
@@ -356,7 +355,8 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
       refreshonly => true,
       user        => $tutor_user,
       path        => ['/usr/bin', '/usr/local/bin'],
-      notify      => Exec['tutor local do init']
+      notify      => Exec['tutor local do init'],
+      before      => Exec['tutor local start --detach']
     }
     file { "/${tutor_user}/.backup_restored":
       ensure  => file,
@@ -414,7 +414,6 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
     path      => ['/usr/bin', '/usr/local/bin'],
     subscribe => Package['tutor'],
     notify    => [Exec['tutor local do init']],
-    before    => [Exec['tutor local reboot --detach']]
   }
 
   exec { 'first tutor local dc pull':
@@ -432,7 +431,7 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
     refreshonly => true,
     timeout     => 1800,
     subscribe   => [Exec['tutor local dc pull']],
-    before      => [Exec['tutor local reboot --detach']]
+    notify      => [Exec['tutor local reboot --detach']]
   }
   exec { 'first tutor local do init':
     command      => 'tutor local do init',
