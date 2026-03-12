@@ -72,7 +72,8 @@ define tutor::plugin_dep (
       name     => $dep['name'],
       provider => 'pip3',
       require  => [Package['tutor'], Package['python3.11-pip']],
-      before   => [Exec['first tutor local dc pull'], Exec['tutor config save']],
+      before   => Exec['first tutor local dc pull'],
+      notify   => Exec['tutor config save'],
       source   => $dep['source'],
     }
   }
@@ -81,6 +82,7 @@ define tutor::plugin (
   Array[String] $images = [],
   Boolean $reboot_on_change = false,
   Boolean $reinit_on_change = false,
+  Boolean $build_no_cache = false,
   Boolean $enabled = true,
   Variant[PluginFileURL, String[1], PythonPackageDef, PluginArchive] $dep,
 ) {
@@ -128,14 +130,14 @@ define tutor::plugin (
   }
 
   $images.each |String $image| {
-    Tutor::Plugin_dep[$title] ~> Exec["tutor images rebuild ${image}"]
-    if $image == 'openedx' {
+    if $image == 'openedx' or $build_no_cache {
       $options = '--no-cache'
     }
     else {
       $options = ''
     }
-    ensure_resource('exec', "tutor images rebuild ${image}", {
+    Tutor::Plugin_dep[$title] ~> Exec["tutor images rebuild ${image} ${options}"]
+    ensure_resource('exec', "tutor images rebuild ${image} ${options}", {
         command     => "tutor images build ${image} ${options}",
         user        => $tutor_user,
         refreshonly => true,
@@ -145,10 +147,10 @@ define tutor::plugin (
         before      => [Exec['tutor local start --detach'], Exec['tutor local reboot --detach']],
     })
     if $reboot_on_change {
-      Exec["tutor images rebuild ${image}"] ~> Exec['tutor local reboot --detach']
+      Exec["tutor images rebuild ${image} ${options}"] ~> Exec['tutor local reboot --detach']
     }
     if $reinit_on_change {
-      Exec["tutor images rebuild ${image}"] ~> Exec['tutor local do init']
+      Exec["tutor images rebuild ${image} ${options}"] ~> Exec['tutor local do init']
     }
   }
 }
@@ -201,14 +203,15 @@ class tutor (
   String $tutor_user = 'tutor',
   String $tutor_plugins_dir = "/${tutor_user}/.local/share/tutor-plugins",
   String $tutor_backup_dir = "/${tutor_user}/.local/share/tutor/env/backup/",
-  String $tutor_contrib_backup_version = '3.3.0',
-  String $version = '18.1.3',
+  String $tutor_contrib_backup_version = '4.5.0',
+  String $version = '21.0.1',
   Hash[String, String] $config,
   Optional[Hash[String, Array[String]]] $env_patches = undef,
   Array[String] $openedx_extra_pip_requirements = [],
   String $brand_theme_url = '',
   String $admin_password,
   String $admin_email,
+  String $aspects_version = '3.0.3',
   Optional[Struct[{ date => String[1], path => String[1] }]] $backup_to_restore = undef,
   Optional[Array[String]] $registration_email_patterns_allowed = undef,
   Optional[Hash[String, Optional[TutorPlugin]]] $plugins = undef,
@@ -320,6 +323,35 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
                  'source' => 'git+https://github.com/hastexo/tutor-contrib-backup',
                  'ensure' => "v${tutor_contrib_backup_version}",
                },
+  }
+
+  if $aspects_version {
+    tutor::plugin { 'aspects':
+      images => ['openedx aspects aspects-superset', 'mfe'],
+      build_no_cache => true,
+      dep    => {
+        'name' => 'tutor-contrib-aspects',
+        'ensure' => $aspects_version
+      }
+    }
+    exec {"rm -rf /${tutor_user}/.local/share/tutor/env/plugins/aspects/build/aspects-superset/openedx-assets/assets":
+      refreshonly => true,
+      subscribe   => Package['tutor-contrib-aspects'],
+      before      => Exec['tutor config save'],
+      path        => ['/bin/', '/usr/bin'],
+    } ~>
+    exec {'tutor local do init -l aspects':
+      refreshonly => true,
+      user        => $tutor_user,
+      require     => [Exec['tutor images rebuild openedx aspects aspects-superset --no-cache'], Exec['tutor images rebuild mfe --no-cache']],
+      path        => ['/usr/bin', '/usr/local/bin'],
+    } ~>
+    exec {'tutor local do dbt -c "run-operation remove_deprecated_models" --only_changed False':
+      refreshonly => true,
+      user        => $tutor_user,
+      path        => ['/usr/bin', '/usr/local/bin'],
+      notify      => Exec['tutor local reboot --detach'],
+    }
   }
 
   if $brand_theme_url != '' {
