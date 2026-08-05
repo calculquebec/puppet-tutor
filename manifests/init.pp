@@ -204,6 +204,7 @@ class tutor (
   String $tutor_plugins_dir = "/${tutor_user}/.local/share/tutor-plugins",
   String $tutor_backup_dir = "/${tutor_user}/.local/share/tutor/env/backup/",
   String $tutor_contrib_backup_version = '4.5.0',
+  String $tutor_contrib_backup_source_url = 'git+https://github.com/hastexo/tutor-contrib-backup',
   String $version = '21.0.1',
   Hash[String, String] $config,
   Optional[Hash[String, Array[String]]] $env_patches = undef,
@@ -320,7 +321,7 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
     images  => ['backup'],
     dep     => {
                  'name'   => 'tutor-contrib-backup',
-                 'source' => 'git+https://github.com/hastexo/tutor-contrib-backup',
+                 'source' => $tutor_contrib_backup_source_url,
                  'ensure' => "v${tutor_contrib_backup_version}",
                },
   }
