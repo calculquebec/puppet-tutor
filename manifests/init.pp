@@ -53,6 +53,7 @@ define tutor::plugin_dep (
       group           => $tutor_user,
       before          => Exec['first tutor local dc pull'],
       notify          => Exec['tutor config save'],
+      cleanup         => false,
     }
   }
   if $dep.is_a(String) {
@@ -187,6 +188,7 @@ define tutor::theme (
     group           => $tutor_user,
     notify          => Exec['tutor images build openedx'],
     require         => File[$theme_path],
+    cleanup         => false,
   }
 
   if $enabled {
@@ -328,7 +330,7 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
 
   if $aspects_version {
     tutor::plugin { 'aspects':
-      images => ['openedx aspects aspects-superset', 'mfe'],
+      images => ['openedx aspects aspects-superset permissions', 'mfe'],
       build_no_cache => true,
       dep    => {
         'name' => 'tutor-contrib-aspects',
@@ -344,7 +346,7 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
     exec {'tutor local do init -l aspects':
       refreshonly => true,
       user        => $tutor_user,
-      require     => [Exec['tutor images rebuild openedx aspects aspects-superset --no-cache'], Exec['tutor images rebuild mfe --no-cache']],
+      require     => [Exec['tutor images rebuild openedx aspects aspects-superset permissions --no-cache'], Exec['tutor images rebuild mfe --no-cache']],
       path        => ['/usr/bin', '/usr/local/bin'],
     } ~>
     exec {'tutor local do dbt -c "run-operation remove_deprecated_models" --only_changed False':
