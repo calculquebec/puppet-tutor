@@ -324,7 +324,7 @@ REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
     dep     => {
                  'name'   => 'tutor-contrib-backup',
                  'source' => $tutor_contrib_backup_source_url,
-                 'ensure' => "v${tutor_contrib_backup_version}",
+                 'ensure' => "${tutor_contrib_backup_version}",
                },
   }
 
