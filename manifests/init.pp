@@ -300,10 +300,10 @@ class tutor (
   if $registration_email_patterns_allowed {
     $registration_email_plugin_template = @(END)
     from tutor import hooks
-    hooks.Filters.ENV_PATCHES.add_item(("openedx-common-settings", """
+    hooks.Filters.ENV_PATCHES.add_item(("openedx-common-settings", r"""
 REGISTRATION_EMAIL_PATTERNS_ALLOWED = [
     <%- $registration_email_patterns_allowed.each |$index, $pattern| { -%>
-    "<%= $pattern %>",
+    r"<%= $pattern %>",
     <%- } -%>
     ]"""))
     |END

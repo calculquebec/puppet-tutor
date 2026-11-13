@@ -1,6 +1,6 @@
 {
     "name": "puppet-tutor",
-    "version": "0.1",
+    "version": "0.1.1",
     "author": "Maxime Boissonneault",
     "summary": "Install, configure, and manage Tutor (OpenEdX)",
     "license": "MIT",
